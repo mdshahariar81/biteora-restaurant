@@ -1,26 +1,951 @@
 @import "tailwindcss";
 
+/* =========================================================
+   RM01 — Restaurant Modern
+   Global Design System
+   ========================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* =======================================================
+     Brand Colors
+     ======================================================= */
+  --color-primary: #b7090b;
+  --color-primary-hover: #930708;
+  --color-accent: #e21b23;
+
+  /* =======================================================
+     Background Colors
+     ======================================================= */
+  --color-background: #f8f6f2;
+  --color-background-warm: #fdf9f4;
+  --color-surface: #ffffff;
+
+  /* =======================================================
+     Text Colors
+     ======================================================= */
+  --color-text: #171717;
+  --color-text-secondary: #5f5f5f;
+  --color-text-muted: #88837c;
+
+  /* =======================================================
+     UI Colors
+     ======================================================= */
+  --color-border: #e8e3dc;
+  --color-star: #f5a400;
+
+  /* =======================================================
+     Border Radius
+     ======================================================= */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+/* =========================================================
+   GLOBAL RESET
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+
+/* =========================================================
+   HTML
+   ========================================================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+/* =========================================================
+   BODY
+   ========================================================= */
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: Arial, Helvetica, sans-serif;
+
+  /* Improve text rendering */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+
+/* =========================================================
+   FORM ELEMENTS
+   ========================================================= */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   GLOBAL IMAGE RULE
+   =========================================================
+
+   IMPORTANT:
+   We intentionally do NOT force height:auto here.
+
+   Why?
+
+   Components using Tailwind utilities such as:
+
+   h-full
+   h-auto
+   object-contain
+   object-cover
+
+   need to control their own image height.
+
+   Previously:
+
+       height: auto;
+
+   was overriding the Special Offer image's h-full
+   behavior and causing the image to extend/crop incorrectly.
+   ========================================================= */
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+
+/* =========================================================
+   LINKS
+   ========================================================= */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+
+/* =========================================================
+   TEXT SELECTION
+   ========================================================= */
+
+::selection {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   CUSTOM SCROLLBAR
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d2ccc3;
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+
+/* =========================================================
+   RM01 — TYPOGRAPHY & MOTION ENHANCEMENT
+   ========================================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+
+/* =========================================================
+   MAIN PAGE HEADING
+   ========================================================= */
+
+h1 {
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+
+/* =========================================================
+   SECTION HEADINGS
+   ========================================================= */
+
+h2 {
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+
+/* =========================================================
+   SMALLER HEADINGS
+   ========================================================= */
+
+h3,
+h4 {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+
+/* =========================================================
+   PARAGRAPH READABILITY
+   ========================================================= */
+
+p {
+  line-height: 1.65;
+}
+
+
+/* =========================================================
+   PREMIUM TEXT UTILITY
+   ========================================================= */
+
+.text-highlight {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+
+/* =========================================================
+   BRAND TEXT
+   ========================================================= */
+
+.text-brand {
+  color: var(--color-primary);
+}
+
+
+/* =========================================================
+   SUBTLE TEXT ENTRANCE
+   ========================================================= */
+
+.text-reveal {
+  animation: text-reveal 700ms ease-out both;
+}
+
+@keyframes text-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+
+/* =========================================================
+   SMOOTH INTERACTIVE TEXT
+   ========================================================= */
+
+.text-interactive {
+  transition:
+    color 200ms ease,
+    opacity 200ms ease;
+}
+
+.text-interactive:hover {
+  color: var(--color-primary);
+}
+
+
+/* =========================================================
+   PREMIUM BUTTON MOTION
+   ========================================================= */
+
+.button-motion {
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    opacity 200ms ease;
+}
+
+.button-motion:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgb(183 9 11 / 14%);
+}
+
+.button-motion:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   CARD MOTION
+   ========================================================= */
+
+.card-motion {
+  transition:
+    transform 250ms ease,
+    box-shadow 250ms ease,
+    border-color 250ms ease;
+}
+
+.card-motion:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgb(23 23 23 / 7%);
+}
+
+
+/* =========================================================
+   PRODUCT IMAGE MOTION
+   ========================================================= */
+
+.image-hover {
+  overflow: hidden;
+}
+
+.image-hover-target {
+  transition: transform 450ms ease;
+}
+
+.image-hover:hover .image-hover-target {
+  transform: scale(1.04);
+}
+
+
+/* =========================================================
+   SOFT FLOATING EFFECT
+   ========================================================= */
+
+.float-soft {
+  animation: float-soft 4s ease-in-out infinite;
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY — REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* =========================================================
+   HERO ANIMATIONS
+   ========================================================= */
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes heroImageIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes heroGlow {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(1);
+  }
+
+  50% {
+    transform: translateY(-50%) scale(1.04);
+  }
+}
+
+
+/* Hero utility classes */
+
+.hero-fade-up {
+  animation: heroFadeUp 0.75s ease-out both;
+}
+
+.hero-fade-in {
+  animation: heroFadeIn 0.8s ease-out both;
+}
+
+.hero-image-in {
+  animation: heroImageIn 1s ease-out both;
+}
+
+.hero-glow {
+  animation: heroGlow 5s ease-in-out infinite;
+}
+
+
+/* Hero reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-fade-up,
+  .hero-fade-in,
+  .hero-image-in,
+  .hero-glow {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   NAVBAR ANIMATIONS
+   ========================================================= */
+
+@keyframes navbarFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mobileMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mobileLinkIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes menuIconIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7) rotate(-10deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+
+/* Navbar reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[navbarFadeIn_0\.5s_ease-out_both\],
+  .animate-\[mobileMenuIn_0\.3s_ease-out_both\],
+  .animate-\[mobileLinkIn_0\.35s_ease-out_both\],
+  .animate-\[menuIconIn_0\.2s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   CATEGORIES ANIMATION
+   ========================================================= */
+
+@keyframes categoryFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Categories reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[categoryFadeUp_0\.6s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   POPULAR COMBOS ANIMATIONS
+   ========================================================= */
+
+@keyframes comboHeadingIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes comboCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Popular Combos reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[comboHeadingIn_0\.6s_ease-out_both\],
+  .animate-\[comboCardIn_0\.65s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   SPECIAL OFFER ANIMATIONS
+   ========================================================= */
+
+@keyframes offerTextIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/*
+ * Product image entrance.
+ *
+ * IMPORTANT:
+ * Only X-axis movement is used.
+ *
+ * There is NO translateY() here.
+ * Therefore the animation itself cannot move the
+ * Special Offer image downward.
+ */
+@keyframes offerImageIn {
+  from {
+    opacity: 0;
+    transform: translateX(35px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+
+@keyframes offerBadgeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.75) rotate(-8deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+
+/* =========================================================
+   SPECIAL OFFER IMAGE FIX
+   =========================================================
+
+   This is the important fix.
+
+   The global img rule intentionally avoids forcing
+   height:auto.
+
+   But we additionally make the Special Offer image
+   explicitly fill its wrapper.
+
+   object-fit: contain
+       → keeps the complete image visible.
+
+   object-position: right bottom
+       → keeps the product aligned to the bottom-right.
+
+   height: 100%
+       → prevents the image from becoming taller than
+         the Special Offer image container.
+   ========================================================= */
+
+section#offers img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: right bottom;
+}
+
+
+/* =========================================================
+   SPECIAL OFFER REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[offerTextIn_0\.6s_ease-out_both\],
+  .animate-\[offerTextIn_0\.7s_ease-out_0\.1s_both\],
+  .animate-\[offerTextIn_0\.7s_ease-out_0\.2s_both\],
+  .animate-\[offerTextIn_0\.7s_ease-out_0\.3s_both\],
+  .animate-\[offerImageIn_0\.9s_ease-out_0\.15s_both\],
+  .animate-\[offerBadgeIn_0\.7s_ease-out_0\.4s_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   FEATURES ANIMATION
+   ========================================================= */
+
+@keyframes featureFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Features reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[featureFadeUp_0\.6s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   ABOUT SECTION ANIMATIONS
+   ========================================================= */
+
+@keyframes aboutContentIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes aboutTextIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes aboutImageIn {
+  from {
+    opacity: 0;
+    transform: translateX(25px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+
+/* About reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[aboutContentIn_0\.7s_ease-out_both\],
+  .animate-\[aboutTextIn_0\.6s_ease-out_both\],
+  .animate-\[aboutTextIn_0\.7s_ease-out_both\],
+  .animate-\[aboutImageIn_0\.9s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   TESTIMONIALS ANIMATIONS
+   ========================================================= */
+
+@keyframes testimonialHeaderIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes testimonialCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Testimonials reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[testimonialHeaderIn_0\.7s_ease-out_both\],
+  .animate-\[testimonialCardIn_0\.65s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   APP DOWNLOAD ANIMATIONS
+   ========================================================= */
+
+@keyframes appSectionIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes appTextIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes appButtonsIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes appImageIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+
+/* App Download reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[appSectionIn_0\.7s_ease-out_both\],
+  .animate-\[appTextIn_0\.6s_ease-out_both\],
+  .animate-\[appTextIn_0\.7s_ease-out_both\],
+  .animate-\[appButtonsIn_0\.7s_ease-out_both\],
+  .animate-\[appImageIn_0\.9s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   FOOTER ANIMATIONS
+   ========================================================= */
+
+@keyframes footerFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes footerColumnIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes footerMessageIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes developerPopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+/* Footer reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[footerFadeIn_0\.7s_ease-out_both\],
+  .animate-\[footerColumnIn_0\.6s_ease-out_both\],
+  .animate-\[footerMessageIn_0\.3s_ease-out_both\],
+  .animate-\[developerPopupIn_0\.3s_ease-out_both\] {
+    animation: none;
+  }
+}
+
+@keyframes cartBadgePop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
