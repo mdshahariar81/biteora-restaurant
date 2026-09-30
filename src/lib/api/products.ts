@@ -1,19 +1,42 @@
 // src/lib/api/products.ts
 
-export interface ProductPayload {
+import {
+  apiDelete,
+  apiGet,
+  apiPatch,
+  apiPost,
+} from "./client";
+
+export type ProductCategory =
+  | "Combos"
+  | "Buckets"
+  | "Burgers"
+  | "Chicken"
+  | "Sides"
+  | "Drinks"
+  | "Desserts";
+
+export interface Product {
+  id: string;
   name: string;
-  category:
-    | "Combos"
-    | "Buckets"
-    | "Burgers"
-    | "Chicken"
-    | "Sides"
-    | "Drinks"
-    | "Desserts";
+  category: ProductCategory;
   price: number;
   image: string;
   description: string;
   active: boolean;
+}
+
+export interface ProductPayload {
+  name: string;
+  category: ProductCategory;
+  price: number;
+  image: string;
+  description: string;
+}
+
+export interface UpdateProductPayload
+  extends Partial<ProductPayload> {
+  active?: boolean;
 }
 
 /**
@@ -25,74 +48,38 @@ export interface ProductPayload {
  * DELETE /api/products/:id
  *
  * IMPORTANT:
- * Frontend data must never be trusted.
- * Backend must validate, sanitize, authorize,
- * and perform all database operations.
+ * - Frontend data must never be trusted.
+ * - Backend must validate all input.
+ * - Backend must sanitize user-provided data.
+ * - Backend must verify authentication and authorization.
+ * - Backend must perform all database operations.
+ * - Backend must verify product prices and availability.
  */
 
-// TODO: Backend integration
-export async function getProducts() {
-  // const response = await fetch("/api/products");
-  // if (!response.ok) {
-  //   throw new Error("Failed to fetch products");
-  // }
-  // return response.json();
-
-  return null;
+export async function getProducts(): Promise<Product[]> {
+  return apiGet<Product[]>("/api/products");
 }
 
-// TODO: Backend integration
-export async function createProduct(payload: ProductPayload) {
-  // const response = await fetch("/api/products", {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: JSON.stringify(payload),
-  // });
-  //
-  // if (!response.ok) {
-  //   throw new Error("Failed to create product");
-  // }
-  //
-  // return response.json();
-
-  return null;
+export async function createProduct(
+  payload: ProductPayload,
+): Promise<Product> {
+  return apiPost<Product>("/api/products", payload);
 }
 
-// TODO: Backend integration
 export async function updateProduct(
   id: string,
-  payload: Partial<ProductPayload>,
-) {
-  // const response = await fetch(`/api/products/${id}`, {
-  //   method: "PATCH",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: JSON.stringify(payload),
-  // });
-  //
-  // if (!response.ok) {
-  //   throw new Error("Failed to update product");
-  // }
-  //
-  // return response.json();
-
-  return null;
+  payload: UpdateProductPayload,
+): Promise<Product> {
+  return apiPatch<Product>(
+    `/api/products/${id}`,
+    payload,
+  );
 }
 
-// TODO: Backend integration
-export async function deleteProduct(id: string) {
-  // const response = await fetch(`/api/products/${id}`, {
-  //   method: "DELETE",
-  // });
-  //
-  // if (!response.ok) {
-  //   throw new Error("Failed to delete product");
-  // }
-  //
-  // return response.json();
-
-  return null;
+export async function deleteProduct(
+  id: string,
+): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `/api/products/${id}`,
+  );
 }

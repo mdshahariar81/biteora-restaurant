@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import {
   Edit3,
   Image as ImageIcon,
@@ -11,232 +11,17 @@ import {
   X,
 } from "lucide-react";
 
-type ProductCategory =
-  | "Combos"
-  | "Buckets"
-  | "Burgers"
-  | "Chicken"
-  | "Sides"
-  | "Drinks"
-  | "Desserts";
+import type {
+  Product,
+  ProductCategory,
+} from "@/lib/api/products";
 
-interface Product {
-  id: string;
-  name: string;
-  category: ProductCategory;
-  price: number;
-  image: string;
-  description: string;
-  active: boolean;
-}
+import {
+  INITIAL_PRODUCTS,
+  PRODUCT_CATEGORIES,
+} from "@/lib/mock/products";
 
-const CATEGORIES: ProductCategory[] = [
-  "Combos",
-  "Buckets",
-  "Burgers",
-  "Chicken",
-  "Sides",
-  "Drinks",
-  "Desserts",
-];
-
-/*
- * Temporary development product data.
- *
- * Production:
- * This will come from the backend/database.
- */
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: "burger-combo",
-    name: "Burger Combo",
-    category: "Combos",
-    price: 12.5,
-    image: "/images/products/burger-combo.png",
-    description: "Classic burger served with fries and a drink.",
-    active: true,
-  },
-  {
-    id: "wrap-combo",
-    name: "Wrap Combo",
-    category: "Combos",
-    price: 11.5,
-    image: "/images/products/wrap-combo.png",
-    description: "Chicken wrap with fries and a refreshing drink.",
-    active: true,
-  },
-  {
-    id: "chicken-bucket",
-    name: "Chicken Bucket",
-    category: "Buckets",
-    price: 18,
-    image: "/images/products/chicken-bucket.png",
-    description: "Crispy chicken bucket for sharing.",
-    active: true,
-  },
-  {
-    id: "classic-chicken-burger",
-    name: "Classic Chicken Burger",
-    category: "Burgers",
-    price: 8.5,
-    image: "/images/products/classic-chicken-burger.png",
-    description: "Crispy chicken burger with fresh toppings.",
-    active: true,
-  },
-  {
-    id: "spicy-chicken-burger",
-    name: "Spicy Chicken Burger",
-    category: "Burgers",
-    price: 9.5,
-    image: "/images/products/spicy-chicken-burger.png",
-    description: "Spicy crispy chicken burger with signature sauce.",
-    active: true,
-  },
-  {
-    id: "grilled-chicken-burger",
-    name: "Grilled Chicken Burger",
-    category: "Burgers",
-    price: 9.5,
-    image: "/images/products/grilled-chicken-burger.png",
-    description: "Grilled chicken burger with fresh vegetables.",
-    active: true,
-  },
-  {
-    id: "fish-burger",
-    name: "Fish Burger",
-    category: "Burgers",
-    price: 9,
-    image: "/images/products/fish-burger.png",
-    description: "Crispy fish fillet burger with fresh toppings.",
-    active: true,
-  },
-  {
-    id: "chicken-sandwich",
-    name: "Chicken Sandwich",
-    category: "Chicken",
-    price: 7.5,
-    image: "/images/products/chicken-sandwich.png",
-    description: "Tender chicken sandwich with fresh vegetables.",
-    active: true,
-  },
-  {
-    id: "chicken-nuggets",
-    name: "Chicken Nuggets",
-    category: "Chicken",
-    price: 5.5,
-    image: "/images/products/chicken-nuggets.png",
-    description: "Golden crispy chicken nuggets.",
-    active: true,
-  },
-  {
-    id: "chicken-strips",
-    name: "Chicken Strips",
-    category: "Chicken",
-    price: 7,
-    image: "/images/products/chicken-strips.png",
-    description: "Crispy tender chicken strips.",
-    active: true,
-  },
-  {
-    id: "chicken-wings",
-    name: "Chicken Wings",
-    category: "Chicken",
-    price: 8,
-    image: "/images/products/chicken-wings.png",
-    description: "Crispy chicken wings with signature seasoning.",
-    active: true,
-  },
-  {
-    id: "hot-crispy",
-    name: "Hot & Crispy",
-    category: "Chicken",
-    price: 8.5,
-    image: "/images/products/hot-crispy.png",
-    description: "Hot and crispy chicken pieces.",
-    active: true,
-  },
-  {
-    id: "french-fries",
-    name: "French Fries",
-    category: "Sides",
-    price: 3.5,
-    image: "/images/products/french-fries.png",
-    description: "Golden crispy French fries.",
-    active: true,
-  },
-  {
-    id: "onion-rings",
-    name: "Onion Rings",
-    category: "Sides",
-    price: 4,
-    image: "/images/products/onion-rings.png",
-    description: "Crispy golden onion rings.",
-    active: true,
-  },
-  {
-    id: "cola",
-    name: "Cola",
-    category: "Drinks",
-    price: 2.5,
-    image: "/images/products/cola.png",
-    description: "Refreshing chilled cola.",
-    active: true,
-  },
-  {
-    id: "lemonade",
-    name: "Lemonade",
-    category: "Drinks",
-    price: 3,
-    image: "/images/products/lemonade.png",
-    description: "Fresh and refreshing lemonade.",
-    active: true,
-  },
-  {
-    id: "orange-juice",
-    name: "Orange Juice",
-    category: "Drinks",
-    price: 3.5,
-    image: "/images/products/orange-juice.png",
-    description: "Fresh orange juice.",
-    active: true,
-  },
-  {
-    id: "chocolate-brownie",
-    name: "Chocolate Brownie",
-    category: "Desserts",
-    price: 5,
-    image: "/images/products/chocolate-brownie.png",
-    description: "Rich chocolate brownie.",
-    active: true,
-  },
-  {
-    id: "chocolate-sundae",
-    name: "Chocolate Sundae",
-    category: "Desserts",
-    price: 5.5,
-    image: "/images/products/chocolate-sundae.png",
-    description: "Creamy vanilla ice cream with chocolate.",
-    active: true,
-  },
-  {
-    id: "strawberry-sundae",
-    name: "Strawberry Sundae",
-    category: "Desserts",
-    price: 5.5,
-    image: "/images/products/strawberry-sundae.png",
-    description: "Creamy ice cream with strawberry topping.",
-    active: true,
-  },
-  {
-    id: "ice-cream-cone",
-    name: "Ice Cream Cone",
-    category: "Desserts",
-    price: 3.5,
-    image: "/images/products/ice-cream-cone.png",
-    description: "Classic creamy ice cream cone.",
-    active: true,
-  },
-];
+const CATEGORIES = PRODUCT_CATEGORIES;
 
 const EMPTY_FORM = {
   name: "",
@@ -259,8 +44,69 @@ export default function ProductsPage() {
     useState<Product | null>(null);
 
   const [form, setForm] = useState(EMPTY_FORM);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState(
+    EMPTY_FORM.image,
+  );
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  function revokeBlobPreview() {
+    if (imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+  }
+
+  function resetImageState(image = EMPTY_FORM.image) {
+    revokeBlobPreview();
+    setImageFile(null);
+    setImagePreview(image);
+  }
+
+  function handleImageChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    setError("");
+
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError(
+        "Please choose a JPG, PNG, or WEBP image.",
+      );
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      setError("Image must be 5MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    revokeBlobPreview();
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setImageFile(file);
+    setImagePreview(previewUrl);
+  }
+
+  function removeSelectedImage() {
+    revokeBlobPreview();
+    setImageFile(null);
+    setImagePreview("");
+  }
 
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -282,6 +128,7 @@ export default function ProductsPage() {
   function openAddModal() {
     setEditingProduct(null);
     setForm(EMPTY_FORM);
+    resetImageState(EMPTY_FORM.image);
     setError("");
     setMessage("");
     setShowModal(true);
@@ -298,6 +145,8 @@ export default function ProductsPage() {
       description: product.description,
     });
 
+    resetImageState(product.image);
+
     setError("");
     setMessage("");
     setShowModal(true);
@@ -306,6 +155,7 @@ export default function ProductsPage() {
   function closeModal() {
     setShowModal(false);
     setEditingProduct(null);
+    resetImageState();
     setError("");
   }
 
@@ -327,7 +177,7 @@ export default function ProductsPage() {
 
     const name = form.name.trim();
     const description = form.description.trim();
-    const image = form.image.trim();
+    const image = imagePreview.trim();
     const price = Number(form.price);
 
     if (!name) {
@@ -357,7 +207,7 @@ export default function ProductsPage() {
       return;
     }
 
-    if (image.length > 500) {
+    if (!imageFile && image.length > 500) {
       setError("Product image path is too long.");
       return;
     }
@@ -403,9 +253,20 @@ export default function ProductsPage() {
       //
       // Later:
       //
+      // 1. If imageFile exists, upload it first:
+      //    POST /api/uploads/products
+      //    multipart/form-data
+      //
+      // 2. Receive the permanent image URL.
+      //
+      // 3. Send that URL with updateProduct().
+      //
       // await updateProduct(
       //   editingProduct.id,
-      //   productPayload,
+      //   {
+      //     ...productPayload,
+      //     image: uploadedImageUrl,
+      //   },
       // );
       //
       // Expected API:
@@ -432,10 +293,16 @@ export default function ProductsPage() {
       //
       // Later:
       //
+      // 1. Upload imageFile to the backend if selected.
+      // 2. Receive the permanent image URL.
+      // 3. Create the product with that URL.
+      //
+      // const uploadedImageUrl = await uploadProductImage(imageFile);
+      //
       // const createdProduct =
       //   await createProduct({
       //     ...productPayload,
-      //     active: true,
+      //     image: uploadedImageUrl,
       //   });
       //
       // Expected API:
@@ -878,44 +745,82 @@ export default function ProductsPage() {
                 />
               </div>
 
-              {/* Image */}
+              {/* Image upload */}
               <div>
-                <label
-                  htmlFor="product-image"
-                  className="mb-2 block text-xs font-bold text-[var(--color-text)]"
-                >
-                  Product image
-                </label>
+                <div className="mb-2 flex items-center justify-between">
+                  <label
+                    htmlFor="product-image"
+                    className="block text-xs font-bold text-[var(--color-text)]"
+                  >
+                    Product image
+                  </label>
 
-                <div className="flex gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--color-background)]">
-                    {form.image ? (
-                      <img
-                        src={form.image}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <ImageIcon
-                        size={18}
-                        className="text-[var(--color-text-muted)]"
-                      />
-                    )}
+                  <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
+                    JPG, PNG, WEBP • Max 5MB
+                  </span>
+                </div>
+
+                <input
+                  id="product-image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageChange}
+                  className="sr-only"
+                />
+
+                <div className="overflow-hidden rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-background)]">
+                  <div className="flex flex-col items-center justify-center p-5 text-center">
+                    <div className="h-32 w-32 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-sm">
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          alt="Product preview"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <ImageIcon
+                            size={30}
+                            className="text-[var(--color-text-muted)]"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="mt-4 text-sm font-bold text-[var(--color-text)]">
+                      {imageFile
+                        ? imageFile.name
+                        : "Upload a product image"}
+                    </p>
+
+                    <p className="mt-1 max-w-xs text-xs leading-5 text-[var(--color-text-muted)]">
+                      Choose a clear product photo. You can
+                      replace it anytime before saving.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
+                      <label
+                        htmlFor="product-image"
+                        className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-xs font-bold text-white transition hover:bg-[var(--color-primary-hover)]"
+                      >
+                        <ImageIcon size={15} />
+                        {imagePreview
+                          ? "Replace Image"
+                          : "Upload Image"}
+                      </label>
+
+                      {imagePreview &&
+                        imageFile && (
+                          <button
+                            type="button"
+                            onClick={removeSelectedImage}
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 text-xs font-bold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)]"
+                          >
+                            Remove
+                          </button>
+                        )}
+                    </div>
                   </div>
-
-                  <input
-                    id="product-image"
-                    type="text"
-                    value={form.image}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        image: event.target.value,
-                      }))
-                    }
-                    placeholder="/images/products/product.png"
-                    className="h-11 min-w-0 flex-1 rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)]"
-                  />
                 </div>
               </div>
 
