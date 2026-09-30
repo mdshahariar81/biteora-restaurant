@@ -83,10 +83,15 @@ export default function CouponsPage() {
     useState<Coupon[]>(INITIAL_COUPONS);
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<"All" | "Active" | "Inactive">("All");
 
-  const [showModal, setShowModal] = useState(false);
+  const [statusFilter, setStatusFilter] =
+    useState<"All" | "Active" | "Inactive">(
+      "All",
+    );
+
+  const [showModal, setShowModal] =
+    useState(false);
+
   const [editingCoupon, setEditingCoupon] =
     useState<Coupon | null>(null);
 
@@ -94,50 +99,89 @@ export default function CouponsPage() {
     useState<CouponForm>(EMPTY_FORM);
 
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
+
+  const [processingCouponId, setProcessingCouponId] =
+    useState<string | null>(null);
+
+  const [pageError, setPageError] =
+    useState("");
 
   const filteredCoupons = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query =
+      search.trim().toLowerCase();
 
     return coupons.filter((coupon) => {
       const matchesSearch =
         !query ||
-        coupon.code.toLowerCase().includes(query);
+        coupon.code
+          .toLowerCase()
+          .includes(query);
 
       const matchesStatus =
         statusFilter === "All" ||
-        (statusFilter === "Active" && coupon.active) ||
-        (statusFilter === "Inactive" && !coupon.active);
+        (statusFilter === "Active" &&
+          coupon.active) ||
+        (statusFilter === "Inactive" &&
+          !coupon.active);
 
-      return matchesSearch && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
     });
-  }, [coupons, search, statusFilter]);
+  }, [
+    coupons,
+    search,
+    statusFilter,
+  ]);
 
   const activeCount = coupons.filter(
     (coupon) => coupon.active,
   ).length;
 
-  const inactiveCount = coupons.filter(
-    (coupon) => !coupon.active,
-  ).length;
+  const inactiveCount =
+    coupons.filter(
+      (coupon) => !coupon.active,
+    ).length;
+
+  const totalUsed = coupons.reduce(
+    (total, coupon) =>
+      total + coupon.usedCount,
+    0,
+  );
 
   function openAddModal() {
     setEditingCoupon(null);
-    setForm(EMPTY_FORM);
+    setForm({
+      ...EMPTY_FORM,
+    });
     setError("");
     setMessage("");
+    setPageError("");
     setShowModal(true);
   }
 
-  function openEditModal(coupon: Coupon) {
+  function openEditModal(
+    coupon: Coupon,
+  ) {
     setEditingCoupon(coupon);
 
     setForm({
       code: coupon.code,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue.toString(),
-      minOrderAmount: coupon.minOrderAmount.toString(),
-      expiryDate: coupon.expiryDate,
+      discountType:
+        coupon.discountType,
+      discountValue:
+        coupon.discountValue.toString(),
+      minOrderAmount:
+        coupon.minOrderAmount.toString(),
+      expiryDate:
+        coupon.expiryDate,
       usageLimit:
         coupon.usageLimit === null
           ? ""
@@ -146,10 +190,15 @@ export default function CouponsPage() {
 
     setError("");
     setMessage("");
+    setPageError("");
     setShowModal(true);
   }
 
   function closeModal() {
+    if (isSubmitting) {
+      return;
+    }
+
     setShowModal(false);
     setEditingCoupon(null);
     setError("");
@@ -160,37 +209,50 @@ export default function CouponsPage() {
   ) {
     event.preventDefault();
 
+    if (isSubmitting) {
+      return;
+    }
+
     setError("");
     setMessage("");
+    setPageError("");
 
     const code = form.code
       .trim()
       .toUpperCase()
-      .replace(/[^A-Z0-9_-]/g, "");
+      .replace(
+        /[^A-Z0-9_-]/g,
+        "",
+      );
 
-    const discountValue = Number(
-      form.discountValue,
-    );
+    const discountValue =
+      Number(
+        form.discountValue,
+      );
 
-    const minOrderAmount = Number(
-      form.minOrderAmount,
-    );
+    const minOrderAmount =
+      Number(
+        form.minOrderAmount,
+      );
 
     const usageLimit =
       form.usageLimit.trim() === ""
         ? null
-        : Number(form.usageLimit);
+        : Number(
+            form.usageLimit,
+          );
 
     // --------------------------------------------------
     // Frontend validation
     //
-    // IMPORTANT:
-    // Backend must perform the same validation.
+    // Backend MUST repeat these validations.
     // Frontend validation is only for UX.
     // --------------------------------------------------
 
     if (!code) {
-      setError("Coupon code is required.");
+      setError(
+        "Coupon code is required.",
+      );
       return;
     }
 
@@ -209,15 +271,20 @@ export default function CouponsPage() {
     }
 
     if (
-      !Number.isFinite(discountValue) ||
+      !Number.isFinite(
+        discountValue,
+      ) ||
       discountValue <= 0
     ) {
-      setError("Please enter a valid discount value.");
+      setError(
+        "Please enter a valid discount value.",
+      );
       return;
     }
 
     if (
-      form.discountType === "percentage" &&
+      form.discountType ===
+        "percentage" &&
       discountValue > 100
     ) {
       setError(
@@ -227,7 +294,20 @@ export default function CouponsPage() {
     }
 
     if (
-      !Number.isFinite(minOrderAmount) ||
+      form.discountType ===
+        "fixed" &&
+      discountValue > 999999
+    ) {
+      setError(
+        "Fixed discount value is too high.",
+      );
+      return;
+    }
+
+    if (
+      !Number.isFinite(
+        minOrderAmount,
+      ) ||
       minOrderAmount < 0
     ) {
       setError(
@@ -236,8 +316,19 @@ export default function CouponsPage() {
       return;
     }
 
+    if (
+      minOrderAmount > 999999
+    ) {
+      setError(
+        "Minimum order amount is too high.",
+      );
+      return;
+    }
+
     if (!form.expiryDate) {
-      setError("Expiry date is required.");
+      setError(
+        "Expiry date is required.",
+      );
       return;
     }
 
@@ -245,16 +336,26 @@ export default function CouponsPage() {
       `${form.expiryDate}T23:59:59`,
     );
 
-    if (Number.isNaN(expiry.getTime())) {
-      setError("Please enter a valid expiry date.");
+    if (
+      Number.isNaN(
+        expiry.getTime(),
+      )
+    ) {
+      setError(
+        "Please enter a valid expiry date.",
+      );
       return;
     }
 
     if (
       usageLimit !== null &&
-      (!Number.isFinite(usageLimit) ||
+      (!Number.isFinite(
+        usageLimit,
+      ) ||
         usageLimit <= 0 ||
-        !Number.isInteger(usageLimit))
+        !Number.isInteger(
+          usageLimit,
+        ))
     ) {
       setError(
         "Usage limit must be a positive whole number.",
@@ -264,8 +365,19 @@ export default function CouponsPage() {
 
     if (
       usageLimit !== null &&
+      usageLimit > 999999999
+    ) {
+      setError(
+        "Usage limit is too high.",
+      );
+      return;
+    }
+
+    if (
+      usageLimit !== null &&
       editingCoupon &&
-      usageLimit < editingCoupon.usedCount
+      usageLimit <
+        editingCoupon.usedCount
     ) {
       setError(
         `Usage limit cannot be less than current usage (${editingCoupon.usedCount}).`,
@@ -273,147 +385,267 @@ export default function CouponsPage() {
       return;
     }
 
-    // --------------------------------------------------
-    // Backend API contract
-    //
-    // POST  /api/coupons
-    // PATCH /api/coupons/:id
-    //
-    // Backend must verify:
-    // - authentication
-    // - authorization / role
-    // - coupon uniqueness
-    // - discount rules
-    // - expiry
-    // - usage limits
-    // - eligibility
-    // --------------------------------------------------
+    // Prevent duplicate coupon codes.
+    const duplicate = coupons.some(
+      (coupon) =>
+        coupon.id !==
+          editingCoupon?.id &&
+        coupon.code.toLowerCase() ===
+          code.toLowerCase(),
+    );
+
+    if (duplicate) {
+      setError(
+        "A coupon with this code already exists.",
+      );
+      return;
+    }
 
     const couponPayload = {
       code,
-      discountType: form.discountType,
+      discountType:
+        form.discountType,
       discountValue,
       minOrderAmount,
-      expiryDate: form.expiryDate,
+      expiryDate:
+        form.expiryDate,
       usageLimit,
     };
 
-    if (editingCoupon) {
-      // ==================================================
-      // BACKEND INTEGRATION
-      // ==================================================
-      //
-      // Later:
-      //
-      // await updateCoupon(
-      //   editingCoupon.id,
-      //   couponPayload,
-      // );
-      //
-      // Expected:
-      // PATCH /api/coupons/:id
-      //
-      // ==================================================
+    setIsSubmitting(true);
 
-      setCoupons((current) =>
-        current.map((coupon) =>
-          coupon.id === editingCoupon.id
-            ? {
-                ...coupon,
-                ...couponPayload,
-              }
-            : coupon,
-        ),
-      );
+    try {
+      /*
+       * --------------------------------------------------
+       * PRODUCTION BACKEND INTEGRATION
+       * --------------------------------------------------
+       *
+       * Create:
+       *
+       * const createdCoupon =
+       *   await createCoupon(
+       *     couponPayload,
+       *   );
+       *
+       * Expected:
+       * POST /api/coupons
+       *
+       *
+       * Update:
+       *
+       * const updatedCoupon =
+       *   await updateCoupon(
+       *     editingCoupon.id,
+       *     couponPayload,
+       *   );
+       *
+       * Expected:
+       * PATCH /api/coupons/:id
+       *
+       * Backend must verify:
+       *
+       * - Authentication
+       * - Authorization / role
+       * - Coupon uniqueness
+       * - Discount rules
+       * - Expiry
+       * - Usage limits
+       * - Eligibility
+       * - Server-side data validation
+       * --------------------------------------------------
+       */
 
-      setMessage("Coupon updated successfully.");
-    } else {
-      // ==================================================
-      // BACKEND INTEGRATION
-      // ==================================================
-      //
-      // Later:
-      //
-      // const createdCoupon =
-      //   await createCoupon(couponPayload);
-      //
-      // Expected:
-      // POST /api/coupons
-      //
-      // Backend should generate the real database ID.
-      //
-      // ==================================================
-
-      const duplicate = coupons.some(
-        (coupon) =>
-          coupon.code.toLowerCase() ===
-          code.toLowerCase(),
-      );
-
-      if (duplicate) {
-        setError(
-          "A coupon with this code already exists.",
+      if (editingCoupon) {
+        setCoupons(
+          (current) =>
+            current.map(
+              (coupon) =>
+                coupon.id ===
+                editingCoupon.id
+                  ? {
+                      ...coupon,
+                      ...couponPayload,
+                    }
+                  : coupon,
+            ),
         );
-        return;
+
+        setMessage(
+          "Coupon updated successfully.",
+        );
+      } else {
+        const newCoupon: Coupon =
+          {
+            id: `coupon-${Date.now()}`,
+            ...couponPayload,
+            usedCount: 0,
+            active: true,
+          };
+
+        setCoupons(
+          (current) => [
+            newCoupon,
+            ...current,
+          ],
+        );
+
+        setMessage(
+          "Coupon created successfully.",
+        );
       }
 
-      const newCoupon: Coupon = {
-        id: `coupon-${Date.now()}`,
-        ...couponPayload,
-        usedCount: 0,
-        active: true,
-      };
+      setShowModal(false);
+      setEditingCoupon(null);
+      setForm({
+        ...EMPTY_FORM,
+      });
+    } catch (submitError) {
+      console.error(
+        "Coupon operation failed:",
+        submitError,
+      );
 
-      setCoupons((current) => [
-        newCoupon,
-        ...current,
-      ]);
+      setError(
+        "Unable to save the coupon. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
-      setMessage("Coupon created successfully.");
+  function toggleCoupon(
+    couponId: string,
+  ) {
+    if (processingCouponId) {
+      return;
     }
 
-    closeModal();
-  }
-
-  function toggleCoupon(couponId: string) {
-    setCoupons((current) =>
-      current.map((coupon) =>
-        coupon.id === couponId
-          ? {
-              ...coupon,
-              active: !coupon.active,
-            }
-          : coupon,
-      ),
+    setMessage("");
+    setPageError("");
+    setProcessingCouponId(
+      couponId,
     );
 
-    setMessage("Coupon status updated.");
+    try {
+      /*
+       * Production:
+       *
+       * await updateCoupon(
+       *   couponId,
+       *   { active: !coupon.active },
+       * );
+       */
+
+      setCoupons(
+        (current) =>
+          current.map(
+            (coupon) =>
+              coupon.id ===
+              couponId
+                ? {
+                    ...coupon,
+                    active:
+                      !coupon.active,
+                  }
+                : coupon,
+          ),
+      );
+
+      setMessage(
+        "Coupon status updated.",
+      );
+    } catch (toggleError) {
+      console.error(
+        "Coupon status update failed:",
+        toggleError,
+      );
+
+      setPageError(
+        "Unable to update coupon status. Please try again.",
+      );
+    } finally {
+      setProcessingCouponId(
+        null,
+      );
+    }
   }
 
-  function deleteCoupon(coupon: Coupon) {
-    const confirmed = window.confirm(
-      `Delete coupon "${coupon.code}"?`,
+  function deleteCoupon(
+    coupon: Coupon,
+  ) {
+    if (processingCouponId) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Delete coupon "${coupon.code}"?`,
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMessage("");
+    setPageError("");
+    setProcessingCouponId(
+      coupon.id,
     );
 
-    if (!confirmed) return;
+    try {
+      /*
+       * Production:
+       *
+       * await deleteCoupon(
+       *   coupon.id,
+       * );
+       *
+       * Expected:
+       * DELETE /api/coupons/:id
+       */
 
-    setCoupons((current) =>
-      current.filter(
-        (item) => item.id !== coupon.id,
-      ),
-    );
+      setCoupons(
+        (current) =>
+          current.filter(
+            (item) =>
+              item.id !==
+              coupon.id,
+          ),
+      );
 
-    setMessage("Coupon deleted successfully.");
+      setMessage(
+        "Coupon deleted successfully.",
+      );
+    } catch (deleteError) {
+      console.error(
+        "Coupon deletion failed:",
+        deleteError,
+      );
+
+      setPageError(
+        "Unable to delete the coupon. Please try again.",
+      );
+    } finally {
+      setProcessingCouponId(
+        null,
+      );
+    }
   }
 
-  function formatDiscount(coupon: Coupon) {
-    return coupon.discountType === "percentage"
+  function formatDiscount(
+    coupon: Coupon,
+  ) {
+    return coupon.discountType ===
+      "percentage"
       ? `${coupon.discountValue}%`
       : `$${coupon.discountValue.toFixed(2)}`;
   }
 
-  function formatUsage(coupon: Coupon) {
-    return coupon.usageLimit === null
+  function formatUsage(
+    coupon: Coupon,
+  ) {
+    return coupon.usageLimit ===
+      null
       ? `${coupon.usedCount} / Unlimited`
       : `${coupon.usedCount} / ${coupon.usageLimit}`;
   }
@@ -432,25 +664,48 @@ export default function CouponsPage() {
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-            Create and manage discount coupons,
-            usage limits and expiry dates.
+            Create and manage discount
+            coupons, usage limits and
+            expiry dates.
           </p>
         </div>
 
         <button
           type="button"
           onClick={openAddModal}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-lg"
+          disabled={
+            !!processingCouponId
+          }
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-bold text-white transition-all hover:bg-[var(--color-primary-hover)] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus size={18} />
           Add Coupon
         </button>
       </div>
 
-      {/* Message */}
+      {/* Success Message */}
       {message && (
         <div className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700">
           {message}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {pageError && (
+        <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          <span>
+            {pageError}
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setPageError("")
+            }
+            className="shrink-0 underline underline-offset-2"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -492,11 +747,7 @@ export default function CouponsPage() {
           </p>
 
           <p className="mt-3 text-2xl font-extrabold text-[var(--color-text)]">
-            {coupons.reduce(
-              (total, coupon) =>
-                total + coupon.usedCount,
-              0,
-            )}
+            {totalUsed}
           </p>
         </div>
       </div>
@@ -514,7 +765,9 @@ export default function CouponsPage() {
               type="search"
               value={search}
               onChange={(event) =>
-                setSearch(event.target.value)
+                setSearch(
+                  event.target.value,
+                )
               }
               placeholder="Search coupon code..."
               className="h-11 w-full rounded-xl border border-[var(--color-border)] pl-10 pr-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10"
@@ -525,7 +778,8 @@ export default function CouponsPage() {
             value={statusFilter}
             onChange={(event) =>
               setStatusFilter(
-                event.target.value as
+                event.target
+                  .value as
                   | "All"
                   | "Active"
                   | "Inactive",
@@ -536,9 +790,11 @@ export default function CouponsPage() {
             <option value="All">
               All statuses
             </option>
+
             <option value="Active">
               Active
             </option>
+
             <option value="Inactive">
               Inactive
             </option>
@@ -583,111 +839,181 @@ export default function CouponsPage() {
             </thead>
 
             <tbody>
-              {filteredCoupons.map((coupon) => (
-                <tr
-                  key={coupon.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]"
-                >
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-background)] text-[var(--color-primary)]">
-                        <TicketPercent size={18} />
-                      </div>
+              {filteredCoupons.map(
+                (coupon) => {
+                  const isProcessing =
+                    processingCouponId ===
+                    coupon.id;
 
-                      <div>
-                        <p className="text-sm font-extrabold text-[var(--color-text)]">
-                          {coupon.code}
-                        </p>
-
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          {coupon.discountType ===
-                          "percentage"
-                            ? "Percentage discount"
-                            : "Fixed amount discount"}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
-                    {formatDiscount(coupon)}
-                  </td>
-
-                  <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
-                    ${coupon.minOrderAmount.toFixed(2)}
-                  </td>
-
-                  <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
-                    {formatUsage(coupon)}
-                  </td>
-
-                  <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
-                    {coupon.expiryDate}
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleCoupon(coupon.id)
-                      }
-                      className={`rounded-full px-3 py-1 text-[10px] font-bold transition ${
-                        coupon.active
-                          ? "bg-green-50 text-green-700 hover:bg-green-100"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
+                  return (
+                    <tr
+                      key={coupon.id}
+                      className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]"
                     >
-                      {coupon.active
-                        ? "Active"
-                        : "Inactive"}
-                    </button>
-                  </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-background)] text-[var(--color-primary)]">
+                            <TicketPercent
+                              size={
+                                18
+                              }
+                            />
+                          </div>
 
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openEditModal(coupon)
-                        }
-                        aria-label={`Edit ${coupon.code}`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)]"
-                      >
-                        <Edit3 size={15} />
-                      </button>
+                          <div>
+                            <p className="text-sm font-extrabold text-[var(--color-text)]">
+                              {
+                                coupon.code
+                              }
+                            </p>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          deleteCoupon(coupon)
+                            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                              {coupon.discountType ===
+                              "percentage"
+                                ? "Percentage discount"
+                                : "Fixed amount discount"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
+                        {formatDiscount(
+                          coupon,
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
+                        $
+                        {coupon.minOrderAmount.toFixed(
+                          2,
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
+                        {formatUsage(
+                          coupon,
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
+                        {
+                          coupon.expiryDate
                         }
-                        aria-label={`Delete ${coupon.code}`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            toggleCoupon(
+                              coupon.id,
+                            )
+                          }
+                          disabled={
+                            !!processingCouponId
+                          }
+                          className={`rounded-full px-3 py-1 text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                            coupon.active
+                              ? "bg-green-50 text-green-700 hover:bg-green-100"
+                              : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                          }`}
+                        >
+                          {isProcessing
+                            ? "Updating..."
+                            : coupon.active
+                              ? "Active"
+                              : "Inactive"}
+                        </button>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openEditModal(
+                                coupon,
+                              )
+                            }
+                            disabled={
+                              !!processingCouponId
+                            }
+                            aria-label={`Edit ${coupon.code}`}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Edit3
+                              size={
+                                15
+                              }
+                            />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              deleteCoupon(
+                                coupon,
+                              )
+                            }
+                            disabled={
+                              !!processingCouponId
+                            }
+                            aria-label={`Delete ${coupon.code}`}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Trash2
+                              size={
+                                15
+                              }
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                },
+              )}
             </tbody>
           </table>
         </div>
 
-        {filteredCoupons.length === 0 && (
+        {/* Empty state */}
+        {filteredCoupons.length ===
+          0 && (
           <div className="p-10 text-center">
-            <TicketPercent
-              size={28}
-              className="mx-auto text-[var(--color-text-muted)]"
-            />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-background)]">
+              <TicketPercent
+                size={28}
+                className="text-[var(--color-text-muted)]"
+              />
+            </div>
 
-            <p className="mt-3 text-sm font-bold text-[var(--color-text)]">
+            <p className="mt-4 text-sm font-bold text-[var(--color-text)]">
               No coupons found
             </p>
 
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Try another search or status filter.
+              Try another search or
+              status filter.
             </p>
+
+            {(search ||
+              statusFilter !==
+                "All") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter(
+                    "All",
+                  );
+                }}
+                className="mt-4 text-xs font-bold text-[var(--color-primary)] hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -712,15 +1038,22 @@ export default function CouponsPage() {
 
               <button
                 type="button"
-                onClick={closeModal}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-background)]"
+                onClick={
+                  closeModal
+                }
+                disabled={
+                  isSubmitting
+                }
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <X size={19} />
               </button>
             </div>
 
             <form
-              onSubmit={handleSubmit}
+              onSubmit={
+                handleSubmit
+              }
               className="space-y-5 p-5"
             >
               {error && (
@@ -741,22 +1074,33 @@ export default function CouponsPage() {
                 <input
                   id="coupon-code"
                   type="text"
-                  value={form.code}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      code: event.target.value
-                        .toUpperCase()
-                        .replace(
-                          /[^A-Z0-9_-]/g,
-                          "",
-                        ),
-                    }))
+                  value={
+                    form.code
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setForm(
+                      (
+                        current,
+                      ) => ({
+                        ...current,
+                        code: event.target.value
+                          .toUpperCase()
+                          .replace(
+                            /[^A-Z0-9_-]/g,
+                            "",
+                          ),
+                      }),
+                    )
                   }
                   placeholder="WELCOME10"
                   maxLength={30}
                   autoComplete="off"
-                  className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold uppercase outline-none focus:border-[var(--color-primary)]"
+                  disabled={
+                    isSubmitting
+                  }
+                  className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold uppercase outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
                 />
               </div>
 
@@ -771,19 +1115,32 @@ export default function CouponsPage() {
 
                 <select
                   id="discount-type"
-                  value={form.discountType}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      discountType:
-                        event.target.value as DiscountType,
-                    }))
+                  value={
+                    form.discountType
                   }
-                  className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  onChange={(
+                    event,
+                  ) =>
+                    setForm(
+                      (
+                        current,
+                      ) => ({
+                        ...current,
+                        discountType:
+                          event.target
+                            .value as DiscountType,
+                      }),
+                    )
+                  }
+                  disabled={
+                    isSubmitting
+                  }
+                  className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
                 >
                   <option value="percentage">
                     Percentage
                   </option>
+
                   <option value="fixed">
                     Fixed amount
                   </option>
@@ -805,13 +1162,22 @@ export default function CouponsPage() {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={form.discountValue}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        discountValue:
-                          event.target.value,
-                      }))
+                    value={
+                      form.discountValue
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setForm(
+                        (
+                          current,
+                        ) => ({
+                          ...current,
+                          discountValue:
+                            event.target
+                              .value,
+                        }),
+                      )
                     }
                     placeholder={
                       form.discountType ===
@@ -819,7 +1185,10 @@ export default function CouponsPage() {
                         ? "10"
                         : "5.00"
                     }
-                    className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 pr-16 text-sm outline-none focus:border-[var(--color-primary)]"
+                    disabled={
+                      isSubmitting
+                    }
+                    className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 pr-16 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
                   />
 
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--color-text-muted)]">
@@ -845,16 +1214,28 @@ export default function CouponsPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={form.minOrderAmount}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      minOrderAmount:
-                        event.target.value,
-                    }))
+                  value={
+                    form.minOrderAmount
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setForm(
+                      (
+                        current,
+                      ) => ({
+                        ...current,
+                        minOrderAmount:
+                          event.target
+                            .value,
+                      }),
+                    )
                   }
                   placeholder="20.00"
-                  className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  disabled={
+                    isSubmitting
+                  }
+                  className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
                 />
               </div>
 
@@ -870,15 +1251,27 @@ export default function CouponsPage() {
                 <input
                   id="expiry-date"
                   type="date"
-                  value={form.expiryDate}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      expiryDate:
-                        event.target.value,
-                    }))
+                  value={
+                    form.expiryDate
                   }
-                  className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  onChange={(
+                    event,
+                  ) =>
+                    setForm(
+                      (
+                        current,
+                      ) => ({
+                        ...current,
+                        expiryDate:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  disabled={
+                    isSubmitting
+                  }
+                  className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
                 />
               </div>
 
@@ -896,20 +1289,33 @@ export default function CouponsPage() {
                   type="number"
                   min="1"
                   step="1"
-                  value={form.usageLimit}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      usageLimit:
-                        event.target.value,
-                    }))
+                  value={
+                    form.usageLimit
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setForm(
+                      (
+                        current,
+                      ) => ({
+                        ...current,
+                        usageLimit:
+                          event.target
+                            .value,
+                      }),
+                    )
                   }
                   placeholder="100"
-                  className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  disabled={
+                    isSubmitting
+                  }
+                  className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
                 />
 
                 <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
-                  Leave empty for unlimited usage.
+                  Leave empty for
+                  unlimited usage.
                 </p>
               </div>
 
@@ -917,19 +1323,29 @@ export default function CouponsPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={closeModal}
-                  className="h-11 flex-1 rounded-xl border border-[var(--color-border)] text-sm font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]"
+                  onClick={
+                    closeModal
+                  }
+                  disabled={
+                    isSubmitting
+                  }
+                  className="h-11 flex-1 rounded-xl border border-[var(--color-border)] text-sm font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="h-11 flex-1 rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white hover:bg-[var(--color-primary-hover)]"
+                  disabled={
+                    isSubmitting
+                  }
+                  className="h-11 flex-1 rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {editingCoupon
-                    ? "Save Changes"
-                    : "Create Coupon"}
+                  {isSubmitting
+                    ? "Saving..."
+                    : editingCoupon
+                      ? "Save Changes"
+                      : "Create Coupon"}
                 </button>
               </div>
             </form>

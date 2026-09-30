@@ -13,6 +13,12 @@ import {
   Store,
 } from "lucide-react";
 
+import {
+  updateRestaurantSettings,
+  updateOrderSettings,
+  updateNotificationSettings,
+} from "@/lib/api/settings";
+
 interface RestaurantSettings {
   restaurantName: string;
   email: string;
@@ -59,6 +65,13 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSettings = {
   dailyReport: false,
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const MAX_NAME_LENGTH = 100;
+const MAX_EMAIL_LENGTH = 150;
+const MAX_PHONE_LENGTH = 30;
+const MAX_ADDRESS_LENGTH = 300;
+
 export default function SettingsPage() {
   const [restaurantSettings, setRestaurantSettings] =
     useState<RestaurantSettings>(
@@ -76,59 +89,258 @@ export default function SettingsPage() {
     );
 
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  function handleRestaurantSave(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
+  const [savingSection, setSavingSection] = useState<
+    "restaurant" | "orders" | "notifications" | null
+  >(null);
 
-    setMessage(
-      "Restaurant settings saved successfully.",
-    );
-
-    /*
-      Production API:
-
-      PATCH /api/settings/restaurant
-
-      Backend responsibilities:
-      - Authentication
-      - OWNER/ADMIN authorization
-      - Server-side validation
-      - Persist settings in database
-    */
+  function clearFeedback() {
+    setMessage("");
+    setError("");
   }
 
-  function handleOrderSave(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
+  function validateRestaurantSettings(): string | null {
+    const name = restaurantSettings.restaurantName.trim();
+    const email = restaurantSettings.email.trim();
+    const phone = restaurantSettings.phone.trim();
+    const address = restaurantSettings.address.trim();
 
-    setMessage(
-      "Order settings saved successfully.",
-    );
+    if (!name) {
+      return "Restaurant name is required.";
+    }
 
-    /*
-      Production API:
+    if (name.length > MAX_NAME_LENGTH) {
+      return "Restaurant name is too long.";
+    }
 
-      PATCH /api/settings/orders
-    */
+    if (!email) {
+      return "Restaurant email is required.";
+    }
+
+    if (email.length > MAX_EMAIL_LENGTH) {
+      return "Restaurant email is too long.";
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return "Please enter a valid restaurant email.";
+    }
+
+    if (phone.length > MAX_PHONE_LENGTH) {
+      return "Phone number is too long.";
+    }
+
+    if (!address) {
+      return "Restaurant address is required.";
+    }
+
+    if (address.length > MAX_ADDRESS_LENGTH) {
+      return "Restaurant address is too long.";
+    }
+
+    if (!restaurantSettings.currency) {
+      return "Please select a currency.";
+    }
+
+    if (!restaurantSettings.timezone) {
+      return "Please select a timezone.";
+    }
+
+    return null;
   }
 
-  function handleNotificationSave(
+  function validateOrderSettings(): string | null {
+    if (
+      !orderSettings.allowDineIn &&
+      !orderSettings.allowTakeaway
+    ) {
+      return "At least one order type must remain enabled.";
+    }
+
+    return null;
+  }
+
+  async function handleRestaurantSave(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
-    setMessage(
-      "Notification settings saved successfully.",
-    );
+    if (savingSection) return;
 
-    /*
-      Production API:
+    clearFeedback();
 
-      PATCH /api/settings/notifications
-    */
+    const validationError =
+      validateRestaurantSettings();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSavingSection("restaurant");
+
+    try {
+      const payload = {
+        restaurantName:
+          restaurantSettings.restaurantName.trim(),
+        email: restaurantSettings.email.trim(),
+        phone: restaurantSettings.phone.trim(),
+        address: restaurantSettings.address.trim(),
+        currency: restaurantSettings.currency,
+        timezone: restaurantSettings.timezone,
+      };
+
+      /*
+        Production API:
+
+        PATCH /api/settings/restaurant
+
+        Backend responsibilities:
+        - Authentication
+        - OWNER/ADMIN authorization
+        - Server-side validation
+        - Input sanitization
+        - Database persistence
+        - Audit logging where appropriate
+      */
+
+      await updateRestaurantSettings(payload);
+
+      setMessage(
+        "Restaurant settings saved successfully.",
+      );
+    } catch (err) {
+      console.error(
+        "Failed to save restaurant settings:",
+        err,
+      );
+
+      setError(
+        getErrorMessage(
+          err,
+          "Failed to save restaurant settings.",
+        ),
+      );
+    } finally {
+      setSavingSection(null);
+    }
+  }
+
+  async function handleOrderSave(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (savingSection) return;
+
+    clearFeedback();
+
+    const validationError =
+      validateOrderSettings();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSavingSection("orders");
+
+    try {
+      const payload = {
+        acceptOrders: orderSettings.acceptOrders,
+        allowDineIn: orderSettings.allowDineIn,
+        allowTakeaway: orderSettings.allowTakeaway,
+        autoConfirmOrders:
+          orderSettings.autoConfirmOrders,
+      };
+
+      /*
+        Production API:
+
+        PATCH /api/settings/orders
+
+        Backend must enforce:
+        - Authentication
+        - Authorization
+        - Valid boolean values
+        - Business rules
+      */
+
+      await updateOrderSettings(payload);
+
+      setMessage(
+        "Order settings saved successfully.",
+      );
+    } catch (err) {
+      console.error(
+        "Failed to save order settings:",
+        err,
+      );
+
+      setError(
+        getErrorMessage(
+          err,
+          "Failed to save order settings.",
+        ),
+      );
+    } finally {
+      setSavingSection(null);
+    }
+  }
+
+  async function handleNotificationSave(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (savingSection) return;
+
+    clearFeedback();
+
+    setSavingSection("notifications");
+
+    try {
+      const payload = {
+        newOrder: notificationSettings.newOrder,
+        orderStatus:
+          notificationSettings.orderStatus,
+        lowStock: notificationSettings.lowStock,
+        dailyReport:
+          notificationSettings.dailyReport,
+      };
+
+      /*
+        Production API:
+
+        PATCH /api/settings/notifications
+
+        Backend must validate:
+        - Authentication
+        - Authorization
+        - Boolean values
+        - Notification delivery configuration
+      */
+
+      await updateNotificationSettings(payload);
+
+      setMessage(
+        "Notification settings saved successfully.",
+      );
+    } catch (err) {
+      console.error(
+        "Failed to save notification settings:",
+        err,
+      );
+
+      setError(
+        getErrorMessage(
+          err,
+          "Failed to save notification settings.",
+        ),
+      );
+    } finally {
+      setSavingSection(null);
+    }
   }
 
   return (
@@ -149,11 +361,35 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Success message */}
+      {/* Feedback */}
       {message && (
-        <div className="mt-5 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700">
-          <Check size={15} />
-          {message}
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700">
+          <div className="flex items-center gap-2">
+            <Check size={15} />
+            {message}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMessage("")}
+            className="text-xs font-bold text-green-700 hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          <div>{error}</div>
+
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className="shrink-0 text-xs font-bold text-red-700 hover:underline"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -196,17 +432,22 @@ export default function SettingsPage() {
                 value={
                   restaurantSettings.restaurantName
                 }
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFeedback();
+
                   setRestaurantSettings(
                     (current) => ({
                       ...current,
                       restaurantName:
                         event.target.value,
                     }),
-                  )
-                }
-                maxLength={100}
-                className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  );
+                }}
+                maxLength={MAX_NAME_LENGTH}
+                required
+                disabled={savingSection !== null}
+                autoComplete="organization"
+                className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
               />
             </div>
 
@@ -223,16 +464,21 @@ export default function SettingsPage() {
                 id="restaurant-email"
                 type="email"
                 value={restaurantSettings.email}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFeedback();
+
                   setRestaurantSettings(
                     (current) => ({
                       ...current,
                       email: event.target.value,
                     }),
-                  )
-                }
-                maxLength={150}
-                className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  );
+                }}
+                maxLength={MAX_EMAIL_LENGTH}
+                required
+                disabled={savingSection !== null}
+                autoComplete="email"
+                className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
               />
             </div>
 
@@ -249,16 +495,20 @@ export default function SettingsPage() {
                 id="restaurant-phone"
                 type="tel"
                 value={restaurantSettings.phone}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFeedback();
+
                   setRestaurantSettings(
                     (current) => ({
                       ...current,
                       phone: event.target.value,
                     }),
-                  )
-                }
-                maxLength={30}
-                className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  );
+                }}
+                maxLength={MAX_PHONE_LENGTH}
+                disabled={savingSection !== null}
+                autoComplete="tel"
+                className="h-11 w-full rounded-xl border border-[var(--color-border)] px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
               />
             </div>
 
@@ -274,16 +524,19 @@ export default function SettingsPage() {
               <select
                 id="currency"
                 value={restaurantSettings.currency}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFeedback();
+
                   setRestaurantSettings(
                     (current) => ({
                       ...current,
                       currency:
                         event.target.value,
                     }),
-                  )
-                }
-                className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                  );
+                }}
+                disabled={savingSection !== null}
+                className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
               >
                 <option value="USD">
                   USD — US Dollar
@@ -313,16 +566,21 @@ export default function SettingsPage() {
               id="restaurant-address"
               rows={3}
               value={restaurantSettings.address}
-              onChange={(event) =>
+              onChange={(event) => {
+                clearFeedback();
+
                 setRestaurantSettings(
                   (current) => ({
                     ...current,
                     address: event.target.value,
                   }),
-                )
-              }
-              maxLength={300}
-              className="w-full resize-none rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]"
+                );
+              }}
+              maxLength={MAX_ADDRESS_LENGTH}
+              required
+              disabled={savingSection !== null}
+              autoComplete="street-address"
+              className="w-full resize-none rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
 
@@ -338,20 +596,21 @@ export default function SettingsPage() {
             <select
               id="timezone"
               value={restaurantSettings.timezone}
-              onChange={(event) =>
+              onChange={(event) => {
+                clearFeedback();
+
                 setRestaurantSettings(
                   (current) => ({
                     ...current,
                     timezone:
                       event.target.value,
                   }),
-                )
-              }
-              className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)]"
+                );
+              }}
+              disabled={savingSection !== null}
+              className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
             >
-              <option value="UTC">
-                UTC
-              </option>
+              <option value="UTC">UTC</option>
 
               <option value="Asia/Dhaka">
                 Asia/Dhaka
@@ -371,7 +630,11 @@ export default function SettingsPage() {
             </select>
           </div>
 
-          <SaveButton />
+          <SaveButton
+            loading={savingSection === "restaurant"}
+            disabled={savingSection !== null}
+            label="Save Restaurant Settings"
+          />
         </form>
       </section>
 
@@ -401,58 +664,68 @@ export default function SettingsPage() {
             label="Accept new orders"
             description="Allow customers to place new orders."
             checked={orderSettings.acceptOrders}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setOrderSettings((current) => ({
                 ...current,
                 acceptOrders: checked,
-              }))
-            }
+              }));
+            }}
           />
 
           <SettingToggle
             label="Dine-in orders"
             description="Allow customers to select dine-in ordering."
             checked={orderSettings.allowDineIn}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setOrderSettings((current) => ({
                 ...current,
                 allowDineIn: checked,
-              }))
-            }
+              }));
+            }}
           />
 
           <SettingToggle
             label="Takeaway orders"
             description="Allow customers to select takeaway ordering."
             checked={orderSettings.allowTakeaway}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setOrderSettings((current) => ({
                 ...current,
                 allowTakeaway: checked,
-              }))
-            }
+              }));
+            }}
           />
 
           <SettingToggle
             label="Auto-confirm orders"
             description="Automatically confirm newly received orders."
             checked={orderSettings.autoConfirmOrders}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setOrderSettings((current) => ({
                 ...current,
                 autoConfirmOrders: checked,
-              }))
-            }
+              }));
+            }}
           />
 
           <div className="p-5">
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-bold text-white hover:bg-[var(--color-primary-hover)]"
-            >
-              <Save size={16} />
-              Save Order Settings
-            </button>
+            <SaveButton
+              loading={savingSection === "orders"}
+              disabled={savingSection !== null}
+              label="Save Order Settings"
+            />
           </div>
         </form>
       </section>
@@ -483,66 +756,78 @@ export default function SettingsPage() {
             label="New order notifications"
             description="Notify staff when a new order is received."
             checked={notificationSettings.newOrder}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setNotificationSettings(
                 (current) => ({
                   ...current,
                   newOrder: checked,
                 }),
-              )
-            }
+              );
+            }}
           />
 
           <SettingToggle
             label="Order status notifications"
             description="Notify when an order status changes."
             checked={notificationSettings.orderStatus}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setNotificationSettings(
                 (current) => ({
                   ...current,
                   orderStatus: checked,
                 }),
-              )
-            }
+              );
+            }}
           />
 
           <SettingToggle
             label="Low stock notifications"
             description="Notify staff when products need attention."
             checked={notificationSettings.lowStock}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setNotificationSettings(
                 (current) => ({
                   ...current,
                   lowStock: checked,
                 }),
-              )
-            }
+              );
+            }}
           />
 
           <SettingToggle
             label="Daily report"
             description="Receive a daily restaurant performance summary."
             checked={notificationSettings.dailyReport}
-            onChange={(checked) =>
+            disabled={savingSection !== null}
+            onChange={(checked) => {
+              clearFeedback();
+
               setNotificationSettings(
                 (current) => ({
                   ...current,
                   dailyReport: checked,
                 }),
-              )
-            }
+              );
+            }}
           />
 
           <div className="p-5">
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-bold text-white hover:bg-[var(--color-primary-hover)]"
-            >
-              <Save size={16} />
-              Save Notification Settings
-            </button>
+            <SaveButton
+              loading={
+                savingSection === "notifications"
+              }
+              disabled={savingSection !== null}
+              label="Save Notification Settings"
+            />
           </div>
         </form>
       </section>
@@ -586,6 +871,12 @@ export default function SettingsPage() {
 
             <button
               type="button"
+              onClick={() => {
+                setError(
+                  "Password change will be connected to the authentication backend.",
+                );
+                setMessage("");
+              }}
               className="h-10 rounded-xl border border-[var(--color-border)] px-4 text-xs font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]"
             >
               Change Password
@@ -614,7 +905,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Business hours placeholder */}
+      {/* Business hours */}
       <section className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-sm">
         <div className="flex items-center gap-3 border-b border-[var(--color-border)] p-5">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-background)] text-[var(--color-primary)]">
@@ -680,11 +971,11 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Backend contract */}
       {/*
         Production API contract:
 
-        GET  /api/settings
+        GET /api/settings
+
         PATCH /api/settings/restaurant
         PATCH /api/settings/orders
         PATCH /api/settings/notifications
@@ -697,19 +988,38 @@ export default function SettingsPage() {
         - Frontend values are never trusted.
         - Sensitive payment credentials must remain
           server-side.
+        - Backend should persist settings in the database.
       */}
     </div>
   );
 }
 
-function SaveButton() {
+function SaveButton({
+  loading,
+  disabled,
+  label,
+}: {
+  loading: boolean;
+  disabled: boolean;
+  label: string;
+}) {
   return (
     <button
       type="submit"
-      className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-bold text-white hover:bg-[var(--color-primary-hover)]"
+      disabled={disabled}
+      className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-bold text-white hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <Save size={16} />
-      Save Restaurant Settings
+      {loading ? (
+        <>
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          Saving...
+        </>
+      ) : (
+        <>
+          <Save size={16} />
+          {label}
+        </>
+      )}
     </button>
   );
 }
@@ -718,11 +1028,13 @@ function SettingToggle({
   label,
   description,
   checked,
+  disabled,
   onChange,
 }: {
   label: string;
   description: string;
   checked: boolean;
+  disabled: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
@@ -741,8 +1053,9 @@ function SettingToggle({
         type="button"
         role="switch"
         aria-checked={checked}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+        className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${
           checked
             ? "bg-[var(--color-primary)]"
             : "bg-gray-300"
@@ -750,12 +1063,26 @@ function SettingToggle({
       >
         <span
           className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition ${
-            checked
-              ? "left-6"
-              : "left-1"
+            checked ? "left-6" : "left-1"
           }`}
         />
       </button>
     </div>
   );
+}
+
+function getErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+
+  return fallback;
 }

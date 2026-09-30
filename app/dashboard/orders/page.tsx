@@ -8,6 +8,7 @@ import {
   Filter,
   Search,
   ShoppingBag,
+  X,
   XCircle,
 } from "lucide-react";
 
@@ -19,7 +20,9 @@ type OrderStatus =
   | "COMPLETED"
   | "CANCELLED";
 
-type OrderType = "DINE_IN" | "TAKEAWAY";
+type OrderType =
+  | "DINE_IN"
+  | "TAKEAWAY";
 
 interface Order {
   id: string;
@@ -41,11 +44,11 @@ interface Order {
  * Temporary development data.
  *
  * Production:
- * These orders will come from:
  *
  * GET /api/orders
  *
- * The backend/database will become the source of truth.
+ * The backend/database will become
+ * the source of truth.
  */
 const INITIAL_ORDERS: Order[] = [
   {
@@ -131,7 +134,10 @@ const INITIAL_ORDERS: Order[] = [
   },
 ];
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
+const STATUS_LABELS: Record<
+  OrderStatus,
+  string
+> = {
   PENDING: "Pending",
   CONFIRMED: "Confirmed",
   PREPARING: "Preparing",
@@ -140,86 +146,213 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-const STATUS_CLASSES: Record<OrderStatus, string> = {
-  PENDING: "bg-amber-50 text-amber-700",
-  CONFIRMED: "bg-blue-50 text-blue-700",
-  PREPARING: "bg-purple-50 text-purple-700",
-  READY: "bg-green-50 text-green-700",
-  COMPLETED: "bg-gray-100 text-gray-700",
-  CANCELLED: "bg-red-50 text-red-700",
+const STATUS_CLASSES: Record<
+  OrderStatus,
+  string
+> = {
+  PENDING:
+    "bg-amber-50 text-amber-700",
+  CONFIRMED:
+    "bg-blue-50 text-blue-700",
+  PREPARING:
+    "bg-purple-50 text-purple-700",
+  READY:
+    "bg-green-50 text-green-700",
+  COMPLETED:
+    "bg-gray-100 text-gray-700",
+  CANCELLED:
+    "bg-red-50 text-red-700",
 };
 
 export default function OrdersPage() {
   const [orders, setOrders] =
-    useState<Order[]>(INITIAL_ORDERS);
+    useState<Order[]>(
+      INITIAL_ORDERS,
+    );
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] =
+    useState("");
 
   const [statusFilter, setStatusFilter] =
-    useState<OrderStatus | "ALL">("ALL");
+    useState<
+      OrderStatus | "ALL"
+    >("ALL");
 
   const [selectedOrder, setSelectedOrder] =
-    useState<Order | null>(null);
+    useState<Order | null>(
+      null,
+    );
 
   const [actionMessage, setActionMessage] =
     useState("");
 
-  const filteredOrders = useMemo(() => {
-    const normalizedSearch =
-      search.trim().toLowerCase();
+  const [actionError, setActionError] =
+    useState("");
 
-    return orders.filter((order) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        order.id
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        order.customerName
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        order.phone
-          .toLowerCase()
-          .includes(normalizedSearch);
+  /*
+   * Tracks the order currently being updated.
+   *
+   * Production:
+   * This will remain true while the
+   * PATCH /api/orders/:id request
+   * is running.
+   */
+  const [updatingOrderId, setUpdatingOrderId] =
+    useState<string | null>(
+      null,
+    );
 
-      const matchesStatus =
-        statusFilter === "ALL" ||
-        order.status === statusFilter;
+  /*
+   * Used for future GET /api/orders
+   * loading integration.
+   *
+   * Currently false because the page
+   * uses local development data.
+   */
+  const [isLoading] =
+    useState(false);
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [orders, search, statusFilter]);
+  const filteredOrders =
+    useMemo(() => {
+      const normalizedSearch =
+        search
+          .trim()
+          .toLowerCase();
+
+      return orders.filter(
+        (order) => {
+          const matchesSearch =
+            !normalizedSearch ||
+            order.id
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              ) ||
+            order.customerName
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              ) ||
+            order.phone
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              );
+
+          const matchesStatus =
+            statusFilter ===
+              "ALL" ||
+            order.status ===
+              statusFilter;
+
+          return (
+            matchesSearch &&
+            matchesStatus
+          );
+        },
+      );
+    }, [
+      orders,
+      search,
+      statusFilter,
+    ]);
 
   function updateOrderStatus(
     orderId: string,
     status: OrderStatus,
   ) {
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId
-          ? { ...order, status }
-          : order,
-      ),
+    if (updatingOrderId) {
+      return;
+    }
+
+    setActionMessage("");
+    setActionError("");
+    setUpdatingOrderId(
+      orderId,
     );
 
-    setSelectedOrder((currentOrder) =>
-      currentOrder?.id === orderId
-        ? { ...currentOrder, status }
-        : currentOrder,
-    );
+    try {
+      /*
+       * Temporary frontend state.
+       *
+       * Production:
+       *
+       * await updateOrder(
+       *   orderId,
+       *   { status },
+       * );
+       */
 
-    setActionMessage(
-      `Order ${orderId} updated to ${STATUS_LABELS[status]}.`,
+      setOrders(
+        (currentOrders) =>
+          currentOrders.map(
+            (order) =>
+              order.id === orderId
+                ? {
+                    ...order,
+                    status,
+                  }
+                : order,
+          ),
+      );
+
+      setSelectedOrder(
+        (currentOrder) =>
+          currentOrder?.id ===
+          orderId
+            ? {
+                ...currentOrder,
+                status,
+              }
+            : currentOrder,
+      );
+
+      setActionMessage(
+        `Order ${orderId} updated to ${STATUS_LABELS[status]}.`,
+      );
+    } catch (error) {
+      console.error(
+        "Order status update failed:",
+        error,
+      );
+
+      setActionError(
+        "Unable to update the order. Please try again.",
+      );
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  function cancelOrder(
+    orderId: string,
+  ) {
+    if (updatingOrderId) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Cancel order ${orderId}?`,
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    updateOrderStatus(
+      orderId,
+      "CANCELLED",
     );
   }
 
-  function cancelOrder(orderId: string) {
-    const confirmed = window.confirm(
-      `Cancel order ${orderId}?`,
-    );
+  function closeOrderModal() {
+    if (updatingOrderId) {
+      return;
+    }
 
-    if (!confirmed) return;
-
-    updateOrderStatus(orderId, "CANCELLED");
+    setSelectedOrder(null);
+    setActionError("");
   }
 
   return (
@@ -235,14 +368,34 @@ export default function OrdersPage() {
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-          Monitor incoming orders and manage their status.
+          Monitor incoming orders and
+          manage their status.
         </p>
       </div>
 
-      {/* Message */}
+      {/* Success Message */}
       {actionMessage && (
         <div className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
           {actionMessage}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {actionError && (
+        <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
+          <span>
+            {actionError}
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setActionError("")
+            }
+            className="shrink-0 font-bold underline underline-offset-2"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -252,7 +405,9 @@ export default function OrdersPage() {
           {
             label: "Pending",
             value: orders.filter(
-              (order) => order.status === "PENDING",
+              (order) =>
+                order.status ===
+                "PENDING",
             ).length,
             icon: Clock3,
           },
@@ -260,14 +415,17 @@ export default function OrdersPage() {
             label: "Preparing",
             value: orders.filter(
               (order) =>
-                order.status === "PREPARING",
+                order.status ===
+                "PREPARING",
             ).length,
             icon: ShoppingBag,
           },
           {
             label: "Ready",
             value: orders.filter(
-              (order) => order.status === "READY",
+              (order) =>
+                order.status ===
+                "READY",
             ).length,
             icon: CheckCircle2,
           },
@@ -275,7 +433,8 @@ export default function OrdersPage() {
             label: "Completed",
             value: orders.filter(
               (order) =>
-                order.status === "COMPLETED",
+                order.status ===
+                "COMPLETED",
             ).length,
             icon: CheckCircle2,
           },
@@ -320,10 +479,13 @@ export default function OrdersPage() {
               type="search"
               value={search}
               onChange={(event) =>
-                setSearch(event.target.value)
+                setSearch(
+                  event.target.value,
+                )
               }
               placeholder="Search order ID, customer or phone..."
-              className="h-11 w-full rounded-xl border border-[var(--color-border)] pl-10 pr-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10"
+              disabled={isLoading}
+              className="h-11 w-full rounded-xl border border-[var(--color-border)] pl-10 pr-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
 
@@ -335,22 +497,31 @@ export default function OrdersPage() {
             />
 
             <select
-              value={statusFilter}
+              value={
+                statusFilter
+              }
               onChange={(event) =>
                 setStatusFilter(
-                  event.target.value as
+                  event.target
+                    .value as
                     | OrderStatus
                     | "ALL",
                 )
               }
-              className="h-11 w-full appearance-none rounded-xl border border-[var(--color-border)] bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--color-primary)]"
+              disabled={isLoading}
+              className="h-11 w-full appearance-none rounded-xl border border-[var(--color-border)] bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:bg-gray-50"
             >
               <option value="ALL">
                 All statuses
               </option>
 
-              {Object.entries(STATUS_LABELS).map(
-                ([value, label]) => (
+              {Object.entries(
+                STATUS_LABELS,
+              ).map(
+                ([
+                  value,
+                  label,
+                ]) => (
                   <option
                     key={value}
                     value={value}
@@ -366,139 +537,252 @@ export default function OrdersPage() {
 
       {/* Orders table */}
       <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)] text-left">
-                <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Order
-                </th>
+        {isLoading ? (
+          /* Loading State */
+          <div className="p-6">
+            <div className="space-y-4">
+              {Array.from({
+                length: 4,
+              }).map(
+                (_, index) => (
+                  <div
+                    key={index}
+                    className="flex animate-pulse items-center gap-4 border-b border-[var(--color-border)] pb-4 last:border-0"
+                  >
+                    <div className="h-10 w-20 rounded-lg bg-gray-100" />
 
-                <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Customer
-                </th>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-32 rounded bg-gray-100" />
 
-                <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Type
-                </th>
-
-                <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Total
-                </th>
-
-                <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Status
-                </th>
-
-                <th className="px-5 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Action
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredOrders.map((order) => (
-                <tr
-                  key={order.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]"
-                >
-                  <td className="px-5 py-4">
-                    <p className="text-sm font-bold text-[var(--color-text)]">
-                      {order.id}
-                    </p>
-
-                    <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
-                      {order.createdAt}
-                    </p>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">
-                      {order.customerName}
-                    </p>
-
-                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      {order.phone}
-                    </p>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <p className="text-xs font-semibold text-[var(--color-text)]">
-                      {order.orderType === "DINE_IN"
-                        ? "Dine In"
-                        : "Takeaway"}
-                    </p>
-
-                    {order.tableNumber && (
-                      <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
-                        Table {order.tableNumber}
-                      </p>
-                    )}
-                  </td>
-
-                  <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
-                    ${order.total.toFixed(2)}
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${STATUS_CLASSES[order.status]}`}
-                    >
-                      {STATUS_LABELS[order.status]}
-                    </span>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedOrder(order)
-                        }
-                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 text-xs font-bold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)]"
-                      >
-                        <Eye size={14} />
-                        View
-                      </button>
-
-                      {order.status !==
-                        "COMPLETED" &&
-                        order.status !==
-                          "CANCELLED" && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              cancelOrder(order.id)
-                            }
-                            className="inline-flex h-9 items-center gap-2 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-600 transition hover:bg-red-50"
-                          >
-                            <XCircle size={14} />
-                            Cancel
-                          </button>
-                        )}
+                      <div className="h-3 w-48 rounded bg-gray-100" />
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
 
-        {filteredOrders.length === 0 && (
-          <div className="p-10 text-center">
-            <ShoppingBag
-              size={26}
-              className="mx-auto text-[var(--color-text-muted)]"
-            />
+                    <div className="h-7 w-20 rounded-full bg-gray-100" />
 
-            <p className="mt-3 text-sm font-bold text-[var(--color-text)]">
-              No orders found
-            </p>
-
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Try changing your search or status filter.
-            </p>
+                    <div className="h-9 w-20 rounded-lg bg-gray-100" />
+                  </div>
+                ),
+              )}
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px]">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)] text-left">
+                    <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Order
+                    </th>
+
+                    <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Customer
+                    </th>
+
+                    <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Type
+                    </th>
+
+                    <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Total
+                    </th>
+
+                    <th className="px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Status
+                    </th>
+
+                    <th className="px-5 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredOrders.map(
+                    (order) => {
+                      const isUpdating =
+                        updatingOrderId ===
+                        order.id;
+
+                      return (
+                        <tr
+                          key={
+                            order.id
+                          }
+                          className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]"
+                        >
+                          <td className="px-5 py-4">
+                            <p className="text-sm font-bold text-[var(--color-text)]">
+                              {
+                                order.id
+                              }
+                            </p>
+
+                            <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+                              {
+                                order.createdAt
+                              }
+                            </p>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <p className="text-sm font-semibold text-[var(--color-text)]">
+                              {
+                                order.customerName
+                              }
+                            </p>
+
+                            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                              {
+                                order.phone
+                              }
+                            </p>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <p className="text-xs font-semibold text-[var(--color-text)]">
+                              {order.orderType ===
+                              "DINE_IN"
+                                ? "Dine In"
+                                : "Takeaway"}
+                            </p>
+
+                            {order.tableNumber && (
+                              <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+                                Table{" "}
+                                {
+                                  order.tableNumber
+                                }
+                              </p>
+                            )}
+                          </td>
+
+                          <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
+                            $
+                            {order.total.toFixed(
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            {isUpdating ? (
+                              <span className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-[10px] font-bold text-gray-600">
+                                <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
+                                Updating
+                              </span>
+                            ) : (
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${STATUS_CLASSES[order.status]}`}
+                              >
+                                {
+                                  STATUS_LABELS[
+                                    order.status
+                                  ]
+                                }
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelectedOrder(
+                                    order,
+                                  )
+                                }
+                                disabled={
+                                  !!updatingOrderId
+                                }
+                                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 text-xs font-bold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Eye
+                                  size={
+                                    14
+                                  }
+                                />
+
+                                View
+                              </button>
+
+                              {order.status !==
+                                "COMPLETED" &&
+                                order.status !==
+                                  "CANCELLED" && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      cancelOrder(
+                                        order.id,
+                                      )
+                                    }
+                                    disabled={
+                                      !!updatingOrderId
+                                    }
+                                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    <XCircle
+                                      size={
+                                        14
+                                      }
+                                    />
+
+                                    {isUpdating
+                                      ? "Updating..."
+                                      : "Cancel"}
+                                  </button>
+                                )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    },
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Empty State */}
+            {filteredOrders.length ===
+              0 && (
+              <div className="p-10 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-background)]">
+                  <ShoppingBag
+                    size={26}
+                    className="text-[var(--color-text-muted)]"
+                  />
+                </div>
+
+                <p className="mt-4 text-sm font-bold text-[var(--color-text)]">
+                  No orders found
+                </p>
+
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Try changing your
+                  search or status
+                  filter.
+                </p>
+
+                {(search ||
+                  statusFilter !==
+                    "ALL") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch("");
+                      setStatusFilter(
+                        "ALL",
+                      );
+                    }}
+                    className="mt-4 text-xs font-bold text-[var(--color-primary)] hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -513,18 +797,24 @@ export default function OrdersPage() {
                 </p>
 
                 <h3 className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
-                  {selectedOrder.id}
+                  {
+                    selectedOrder.id
+                  }
                 </h3>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedOrder(null)
+                onClick={
+                  closeOrderModal
                 }
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-background)]"
+                disabled={
+                  !!updatingOrderId
+                }
+                aria-label="Close order details"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <XCircle size={19} />
+                <X size={19} />
               </button>
             </div>
 
@@ -536,11 +826,15 @@ export default function OrdersPage() {
                 </p>
 
                 <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                  {selectedOrder.customerName}
+                  {
+                    selectedOrder.customerName
+                  }
                 </p>
 
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  {selectedOrder.phone}
+                  {
+                    selectedOrder.phone
+                  }
                 </p>
               </div>
 
@@ -570,18 +864,26 @@ export default function OrdersPage() {
 
                 <div className="mt-3 space-y-3">
                   {selectedOrder.items.map(
-                    (item, index) => (
+                    (
+                      item,
+                      index,
+                    ) => (
                       <div
                         key={`${item.name}-${index}`}
                         className="flex items-center justify-between border-b border-[var(--color-border)] pb-3 last:border-0"
                       >
                         <div>
                           <p className="text-sm font-semibold text-[var(--color-text)]">
-                            {item.name}
+                            {
+                              item.name
+                            }
                           </p>
 
                           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                            Qty: {item.quantity}
+                            Qty:{" "}
+                            {
+                              item.quantity
+                            }
                           </p>
                         </div>
 
@@ -590,7 +892,9 @@ export default function OrdersPage() {
                           {(
                             item.price *
                             item.quantity
-                          ).toFixed(2)}
+                          ).toFixed(
+                            2,
+                          )}
                         </p>
                       </div>
                     ),
@@ -606,7 +910,9 @@ export default function OrdersPage() {
 
                 <span className="text-lg font-extrabold text-[var(--color-primary)]">
                   $
-                  {selectedOrder.total.toFixed(2)}
+                  {selectedOrder.total.toFixed(
+                    2,
+                  )}
                 </span>
               </div>
 
@@ -626,26 +932,45 @@ export default function OrdersPage() {
                         "READY",
                         "COMPLETED",
                       ] as OrderStatus[]
-                    ).map((status) => (
-                      <button
-                        key={status}
-                        type="button"
-                        onClick={() =>
-                          updateOrderStatus(
-                            selectedOrder.id,
-                            status,
-                          )
-                        }
-                        className={`rounded-lg px-3 py-2.5 text-xs font-bold transition ${
-                          selectedOrder.status ===
-                          status
-                            ? "bg-[var(--color-primary)] text-white"
-                            : "border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]"
-                        }`}
-                      >
-                        {STATUS_LABELS[status]}
-                      </button>
-                    ))}
+                    ).map(
+                      (status) => {
+                        const isUpdating =
+                          updatingOrderId ===
+                          selectedOrder.id;
+
+                        return (
+                          <button
+                            key={
+                              status
+                            }
+                            type="button"
+                            onClick={() =>
+                              updateOrderStatus(
+                                selectedOrder.id,
+                                status,
+                              )
+                            }
+                            disabled={
+                              !!updatingOrderId
+                            }
+                            className={`rounded-lg px-3 py-2.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              selectedOrder.status ===
+                              status
+                                ? "bg-[var(--color-primary)] text-white"
+                                : "border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]"
+                            }`}
+                          >
+                            {isUpdating &&
+                            selectedOrder.status !==
+                              status
+                              ? "Updating..."
+                              : STATUS_LABELS[
+                                  status
+                                ]}
+                          </button>
+                        );
+                      },
+                    )}
                   </div>
                 </div>
               )}
@@ -662,10 +987,19 @@ export default function OrdersPage() {
                         selectedOrder.id,
                       )
                     }
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-sm font-bold text-red-600 transition hover:bg-red-50"
+                    disabled={
+                      !!updatingOrderId
+                    }
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <XCircle size={16} />
-                    Cancel Order
+                    <XCircle
+                      size={16}
+                    />
+
+                    {updatingOrderId ===
+                    selectedOrder.id
+                      ? "Cancelling..."
+                      : "Cancel Order"}
                   </button>
                 )}
             </div>

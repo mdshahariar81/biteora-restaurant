@@ -101,12 +101,34 @@ export default function CustomersPage() {
   const [search, setSearch] = useState("");
 
   const [statusFilter, setStatusFilter] =
-    useState<
-      "All" | "Active" | "Inactive"
-    >("All");
+    useState<"All" | "Active" | "Inactive">("All");
 
   const [selectedCustomer, setSelectedCustomer] =
     useState<Customer | null>(null);
+
+  const [processingCustomerId, setProcessingCustomerId] =
+    useState<string | null>(null);
+
+  const [message, setMessage] = useState("");
+
+  const [error, setError] = useState("");
+
+  /*
+   * Local demo state for now.
+   *
+   * Production:
+   * Replace this temporary state with:
+   *
+   * GET /api/customers
+   *
+   * Backend should provide:
+   * - customer data
+   * - pagination
+   * - search
+   * - filtering
+   * - order aggregation
+   * - total spending
+   */
 
   const filteredCustomers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -114,9 +136,15 @@ export default function CustomersPage() {
     return customers.filter((customer) => {
       const matchesSearch =
         !query ||
-        customer.name.toLowerCase().includes(query) ||
-        customer.email.toLowerCase().includes(query) ||
-        customer.phone.toLowerCase().includes(query);
+        customer.name
+          .toLowerCase()
+          .includes(query) ||
+        customer.email
+          .toLowerCase()
+          .includes(query) ||
+        customer.phone
+          .toLowerCase()
+          .includes(query);
 
       const matchesStatus =
         statusFilter === "All" ||
@@ -125,16 +153,25 @@ export default function CustomersPage() {
         (statusFilter === "Inactive" &&
           customer.status === "inactive");
 
-      return matchesSearch && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
     });
-  }, [customers, search, statusFilter]);
+  }, [
+    customers,
+    search,
+    statusFilter,
+  ]);
 
   const activeCustomers = customers.filter(
-    (customer) => customer.status === "active",
+    (customer) =>
+      customer.status === "active",
   ).length;
 
   const inactiveCustomers = customers.filter(
-    (customer) => customer.status === "inactive",
+    (customer) =>
+      customer.status === "inactive",
   ).length;
 
   const totalOrders = customers.reduce(
@@ -152,27 +189,144 @@ export default function CustomersPage() {
   function toggleCustomerStatus(
     customerId: string,
   ) {
-    setCustomers((current) =>
-      current.map((customer) =>
-        customer.id === customerId
-          ? {
-              ...customer,
-              status:
-                customer.status === "active"
-                  ? "inactive"
-                  : "active",
-            }
-          : customer,
-      ),
+    if (processingCustomerId) {
+      return;
+    }
+
+    setMessage("");
+    setError("");
+
+    const customer = customers.find(
+      (item) => item.id === customerId,
+    );
+
+    if (!customer) {
+      setError(
+        "Customer could not be found.",
+      );
+      return;
+    }
+
+    const nextStatus: CustomerStatus =
+      customer.status === "active"
+        ? "inactive"
+        : "active";
+
+    setProcessingCustomerId(
+      customerId,
+    );
+
+    try {
+      /*
+       * --------------------------------------------------
+       * PRODUCTION BACKEND INTEGRATION
+       * --------------------------------------------------
+       *
+       * await updateCustomerStatus(
+       *   customerId,
+       *   nextStatus,
+       * );
+       *
+       * Expected:
+       *
+       * PATCH /api/customers/:id/status
+       *
+       * Body:
+       * {
+       *   "status": "active" | "inactive"
+       * }
+       *
+       * Backend must verify:
+       * - Authentication
+       * - Authorization
+       * - Customer existence
+       * - Valid status
+       * - Permission to change account status
+       * --------------------------------------------------
+       */
+
+      setCustomers(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id === customerId
+                ? {
+                    ...item,
+                    status: nextStatus,
+                  }
+                : item,
+          ),
+      );
+
+      setSelectedCustomer(
+        (current) =>
+          current?.id === customerId
+            ? {
+                ...current,
+                status: nextStatus,
+              }
+            : current,
+      );
+
+      setMessage(
+        `Customer ${nextStatus === "active" ? "activated" : "deactivated"} successfully.`,
+      );
+    } catch (statusError) {
+      console.error(
+        "Customer status update failed:",
+        statusError,
+      );
+
+      setError(
+        "Unable to update customer status. Please try again.",
+      );
+    } finally {
+      setProcessingCustomerId(
+        null,
+      );
+    }
+  }
+
+  function openCustomerDetails(
+    customer: Customer,
+  ) {
+    setMessage("");
+    setError("");
+    setSelectedCustomer(
+      customer,
     );
   }
 
-  function formatDate(date: string | null) {
-    if (!date) return "No orders yet";
+  function closeCustomerDetails() {
+    if (processingCustomerId) {
+      return;
+    }
 
-    const parsed = new Date(`${date}T00:00:00`);
+    setSelectedCustomer(null);
+    setError("");
+  }
 
-    if (Number.isNaN(parsed.getTime())) {
+  function clearFilters() {
+    setSearch("");
+    setStatusFilter("All");
+  }
+
+  function formatDate(
+    date: string | null,
+  ) {
+    if (!date) {
+      return "No orders yet";
+    }
+
+    const parsed = new Date(
+      `${date}T00:00:00`,
+    );
+
+    if (
+      Number.isNaN(
+        parsed.getTime(),
+      )
+    ) {
       return date;
     }
 
@@ -199,10 +353,34 @@ export default function CustomersPage() {
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
-          View customer accounts, order activity and
-          spending history.
+          View customer accounts, order activity
+          and spending history.
         </p>
       </div>
+
+      {/* Success message */}
+      {message && (
+        <div className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700">
+          {message}
+        </div>
+      )}
+
+      {/* Error message */}
+      {error && !selectedCustomer && (
+        <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          <span>{error}</span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setError("")
+            }
+            className="shrink-0 underline underline-offset-2"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -278,7 +456,9 @@ export default function CustomersPage() {
               type="search"
               value={search}
               onChange={(event) =>
-                setSearch(event.target.value)
+                setSearch(
+                  event.target.value,
+                )
               }
               placeholder="Search by name, email or phone..."
               className="h-11 w-full rounded-xl border border-[var(--color-border)] pl-10 pr-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10"
@@ -349,126 +529,193 @@ export default function CustomersPage() {
             </thead>
 
             <tbody>
-              {filteredCustomers.map((customer) => (
-                <tr
-                  key={customer.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]"
-                >
-                  {/* Customer */}
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-background)] text-sm font-extrabold text-[var(--color-primary)]">
-                        {customer.name
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
+              {filteredCustomers.map(
+                (customer) => {
+                  const isProcessing =
+                    processingCustomerId ===
+                    customer.id;
 
-                      <div>
-                        <p className="text-sm font-bold text-[var(--color-text)]">
-                          {customer.name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          Joined{" "}
-                          {formatDate(
-                            customer.joinedDate,
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Contact */}
-                  <td className="px-5 py-4">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-                        <Mail size={13} />
-                        {customer.email}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-                        <Phone size={13} />
-                        {customer.phone}
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Orders */}
-                  <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
-                    {customer.ordersCount}
-                  </td>
-
-                  {/* Total spent */}
-                  <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
-                    ${customer.totalSpent.toFixed(2)}
-                  </td>
-
-                  {/* Last order */}
-                  <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
-                    {formatDate(
-                      customer.lastOrderDate,
-                    )}
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-5 py-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleCustomerStatus(
-                          customer.id,
-                        )
-                      }
-                      className={`rounded-full px-3 py-1 text-[10px] font-bold transition ${
-                        customer.status === "active"
-                          ? "bg-green-50 text-green-700 hover:bg-green-100"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
+                  return (
+                    <tr
+                      key={customer.id}
+                      className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-background)]"
                     >
-                      {customer.status ===
-                      "active"
-                        ? "Active"
-                        : "Inactive"}
-                    </button>
-                  </td>
+                      {/* Customer */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-background)] text-sm font-extrabold text-[var(--color-primary)]">
+                            {customer.name
+                              .charAt(
+                                0,
+                              )
+                              .toUpperCase()}
+                          </div>
 
-                  {/* View */}
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedCustomer(
-                            customer,
-                          )
+                          <div>
+                            <p className="text-sm font-bold text-[var(--color-text)]">
+                              {
+                                customer.name
+                              }
+                            </p>
+
+                            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                              Joined{" "}
+                              {formatDate(
+                                customer.joinedDate,
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="px-5 py-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                            <Mail
+                              size={
+                                13
+                              }
+                            />
+
+                            <span>
+                              {
+                                customer.email
+                              }
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                            <Phone
+                              size={
+                                13
+                              }
+                            />
+
+                            <span>
+                              {
+                                customer.phone
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Orders */}
+                      <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
+                        {
+                          customer.ordersCount
                         }
-                        aria-label={`View ${customer.name}`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)]"
-                      >
-                        <Eye size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+
+                      {/* Total spent */}
+                      <td className="px-5 py-4 text-sm font-bold text-[var(--color-text)]">
+                        $
+                        {customer.totalSpent.toFixed(
+                          2,
+                        )}
+                      </td>
+
+                      {/* Last order */}
+                      <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
+                        {formatDate(
+                          customer.lastOrderDate,
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            toggleCustomerStatus(
+                              customer.id,
+                            )
+                          }
+                          disabled={
+                            !!processingCustomerId
+                          }
+                          className={`rounded-full px-3 py-1 text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                            customer.status ===
+                            "active"
+                              ? "bg-green-50 text-green-700 hover:bg-green-100"
+                              : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                          }`}
+                        >
+                          {isProcessing
+                            ? "Updating..."
+                            : customer.status ===
+                                "active"
+                              ? "Active"
+                              : "Inactive"}
+                        </button>
+                      </td>
+
+                      {/* View */}
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openCustomerDetails(
+                                customer,
+                              )
+                            }
+                            disabled={
+                              !!processingCustomerId
+                            }
+                            aria-label={`View ${customer.name}`}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Eye
+                              size={
+                                15
+                              }
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                },
+              )}
             </tbody>
           </table>
         </div>
 
-        {filteredCustomers.length === 0 && (
+        {/* Empty state */}
+        {filteredCustomers.length ===
+          0 && (
           <div className="p-10 text-center">
-            <UserRound
-              size={28}
-              className="mx-auto text-[var(--color-text-muted)]"
-            />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-background)]">
+              <UserRound
+                size={28}
+                className="text-[var(--color-text-muted)]"
+              />
+            </div>
 
-            <p className="mt-3 text-sm font-bold text-[var(--color-text)]">
+            <p className="mt-4 text-sm font-bold text-[var(--color-text)]">
               No customers found
             </p>
 
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Try another search or status filter.
+              Try another search or status
+              filter.
             </p>
+
+            {(search ||
+              statusFilter !==
+                "All") && (
+              <button
+                type="button"
+                onClick={
+                  clearFilters
+                }
+                className="mt-4 text-xs font-bold text-[var(--color-primary)] hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -476,7 +723,7 @@ export default function CustomersPage() {
       {/* Customer details modal */}
       {selectedCustomer && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
             {/* Modal header */}
             <div className="flex items-center justify-between border-b border-[var(--color-border)] p-5">
               <div>
@@ -485,38 +732,56 @@ export default function CustomersPage() {
                 </p>
 
                 <h3 className="mt-1 text-lg font-extrabold text-[var(--color-text)]">
-                  {selectedCustomer.name}
+                  {
+                    selectedCustomer.name
+                  }
                 </h3>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedCustomer(null)
+                onClick={
+                  closeCustomerDetails
                 }
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-background)]"
+                disabled={
+                  !!processingCustomerId
+                }
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <X size={19} />
               </button>
             </div>
 
             <div className="space-y-5 p-5">
+              {/* Modal error */}
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+                  {error}
+                </div>
+              )}
+
               {/* Profile */}
               <div className="flex items-center gap-4 rounded-2xl bg-[var(--color-background)] p-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-lg font-extrabold text-[var(--color-primary)] shadow-sm">
                   {selectedCustomer.name
-                    .charAt(0)
+                    .charAt(
+                      0,
+                    )
                     .toUpperCase()}
                 </div>
 
                 <div>
                   <p className="text-sm font-extrabold text-[var(--color-text)]">
-                    {selectedCustomer.name}
+                    {
+                      selectedCustomer.name
+                    }
                   </p>
 
                   <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                     Customer ID:{" "}
-                    {selectedCustomer.id}
+                    {
+                      selectedCustomer.id
+                    }
                   </p>
                 </div>
               </div>
@@ -525,27 +790,37 @@ export default function CustomersPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-[var(--color-border)] p-4">
                   <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
-                    <Mail size={15} />
+                    <Mail
+                      size={15}
+                    />
+
                     <span className="text-[10px] font-bold uppercase tracking-wider">
                       Email
                     </span>
                   </div>
 
                   <p className="mt-2 break-all text-sm font-semibold text-[var(--color-text)]">
-                    {selectedCustomer.email}
+                    {
+                      selectedCustomer.email
+                    }
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-[var(--color-border)] p-4">
                   <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
-                    <Phone size={15} />
+                    <Phone
+                      size={15}
+                    />
+
                     <span className="text-[10px] font-bold uppercase tracking-wider">
                       Phone
                     </span>
                   </div>
 
                   <p className="mt-2 text-sm font-semibold text-[var(--color-text)]">
-                    {selectedCustomer.phone}
+                    {
+                      selectedCustomer.phone
+                    }
                   </p>
                 </div>
               </div>
@@ -558,7 +833,9 @@ export default function CustomersPage() {
                   </p>
 
                   <p className="mt-2 text-xl font-extrabold text-[var(--color-text)]">
-                    {selectedCustomer.ordersCount}
+                    {
+                      selectedCustomer.ordersCount
+                    }
                   </p>
                 </div>
 
@@ -601,49 +878,42 @@ export default function CustomersPage() {
               </div>
 
               {/* Status */}
-              <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] p-4">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-border)] p-4">
                 <div>
                   <p className="text-sm font-bold text-[var(--color-text)]">
                     Account Status
                   </p>
 
                   <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                    Control customer account availability.
+                    Control customer account
+                    availability.
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={() =>
                     toggleCustomerStatus(
                       selectedCustomer.id,
-                    );
-
-                    setSelectedCustomer(
-                      (current) =>
-                        current
-                          ? {
-                              ...current,
-                              status:
-                                current.status ===
-                                "active"
-                                  ? "inactive"
-                                  : "active",
-                            }
-                          : null,
-                    );
-                  }}
-                  className={`rounded-full px-3 py-1 text-[10px] font-bold ${
+                    )
+                  }
+                  disabled={
+                    !!processingCustomerId
+                  }
+                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                     selectedCustomer.status ===
                     "active"
-                      ? "bg-green-50 text-green-700"
-                      : "bg-gray-100 text-gray-500"
+                      ? "bg-green-50 text-green-700 hover:bg-green-100"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                   }`}
                 >
-                  {selectedCustomer.status ===
-                  "active"
-                    ? "Active"
-                    : "Inactive"}
+                  {processingCustomerId ===
+                  selectedCustomer.id
+                    ? "Updating..."
+                    : selectedCustomer.status ===
+                        "active"
+                      ? "Active"
+                      : "Inactive"}
                 </button>
               </div>
 
@@ -659,10 +929,13 @@ export default function CustomersPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedCustomer(null)
+                onClick={
+                  closeCustomerDetails
                 }
-                className="h-11 w-full rounded-xl border border-[var(--color-border)] text-sm font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]"
+                disabled={
+                  !!processingCustomerId
+                }
+                className="h-11 w-full rounded-xl border border-[var(--color-border)] text-sm font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Close
               </button>
@@ -671,28 +944,58 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* Backend API contract */}
       {/*
-        Production API contract:
+        --------------------------------------------------
+        PRODUCTION BACKEND API CONTRACT
+        --------------------------------------------------
 
         GET /api/customers
+
+        Optional query parameters:
+        ?search=
+        &status=
+        &page=
+        &limit=
+
+        Expected response:
+        {
+          "items": [],
+          "page": 1,
+          "limit": 20,
+          "total": 0
+        }
+
+
         GET /api/customers/:id
+
         PATCH /api/customers/:id/status
 
+        Body:
+        {
+          "status": "active" | "inactive"
+        }
+
+
         Backend responsibilities:
+
         - Authentication
         - Authorization
-        - Database queries
         - Customer privacy/access control
-        - Server-side validation
+        - Database queries
+        - Search validation
+        - Filter validation
         - Pagination
-        - Search/filter validation
         - Order aggregation
         - Total spending calculation
+        - Accurate order count
+        - Accurate customer status
 
         IMPORTANT:
-        The frontend must never be trusted for
-        customer status, order count or spending.
+
+        Frontend values such as ordersCount,
+        totalSpent and status must NEVER be
+        treated as trusted financial/account data.
+        --------------------------------------------------
       */}
     </div>
   );
