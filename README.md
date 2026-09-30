@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Biteora — Modern Restaurant Ordering Website
 
-## Getting Started
+Biteora is a modern, responsive restaurant ordering website built with Next.js, React, TypeScript, and Tailwind CSS.
 
-First, run the development server:
+The project is designed with a clean and user-friendly interface for browsing food items, managing a shopping cart, selecting an order type, and preparing for the checkout and online ordering flow.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Home Page
+- Modern restaurant landing page
+- Hero section
+- Food categories
+- Popular combos
+- Special offers
+- Restaurant features
+- About section
+- Customer testimonials
+- App download section
+- Contact section
+- Responsive navigation and footer
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Menu
+- Food category filtering
+- Product cards
+- Product images
+- Product pricing
+- Add to cart functionality
+- Visual add-to-cart feedback
+- Cart item count
+- Responsive menu layout
 
-## Learn More
+### Shopping Cart
+- Add and remove products
+- Increase/decrease product quantity
+- Clear cart
+- Subtotal calculation
+- Order type selection
+- Dine-in support
+- Table number input
+- Takeaway / parcel support
+- $1.00 packaging fee for takeaway
+- Dynamic total calculation
+- Persistent cart using Zustand
 
-To learn more about Next.js, take a look at the following resources:
+### Checkout
+Checkout is being developed as the next stage of the project.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Planned checkout functionality includes:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Customer information
+- Order details
+- Order type confirmation
+- Table number validation for dine-in
+- Takeaway packaging fee
+- Payment method selection
+- Order placement
+- Order confirmation
+- Order ID and order status
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Zustand
+- Lucide React
+- ESLint
+
+---
+
+## Project Structure
+
+```text
+biteora-restaurant/
+│
+├── app/
+│   ├── cart/
+│   │   └── page.tsx
+│   │
+│   ├── menu/
+│   │   └── page.tsx
+│   │
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+│
+├── public/
+│   └── images/
+│       ├── app/
+│       ├── categories/
+│       ├── hero/
+│       ├── products/
+│       ├── restaurant/
+│       └── testimonials/
+│
+├── src/
+│   ├── components/
+│   │   ├── home/
+│   │   ├── layout/
+│   │   └── ui/
+│   │
+│   ├── data/
+│   ├── lib/
+│   ├── store/
+│   │   └── cartStore.ts
+│   │
+│   └── types/
+│
+├── .gitignore
+├── package.json
+├── tsconfig.json
+└── README.md

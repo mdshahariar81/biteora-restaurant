@@ -607,13 +607,12 @@ export default function CartPage() {
                   CHECKOUT
                   ================================================= */}
 
-              <button
-                type="button"
-                disabled
-                className="mt-6 flex w-full cursor-not-allowed items-center justify-center rounded-full bg-[var(--color-primary)] px-6 py-3.5 text-[13px] font-bold !text-white opacity-60"
-              >
-                Checkout Coming Soon
-              </button>
+              <Link
+                  href="/checkout"
+                  className="mt-6 flex w-full items-center justify-center rounded-full bg-[var(--color-primary)] px-6 py-3.5 text-[13px] font-bold !text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--color-primary-hover)] hover:!text-white hover:shadow-lg"
+                  >
+                  Proceed to Checkout
+              </Link>
 
               {/* Continue Shopping */}
 
